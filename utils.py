@@ -9,8 +9,8 @@ class UtilsConfigurator:
         # start = datetime.datetime.now()
         # end = start + datetime.timedelta(days=30)
 
-        start = datetime.datetime(2023, 6, 30)
-        end = start + datetime.timedelta(days = 100)
+        start = datetime.datetime(2021, 1, 1)
+        end = start + datetime.timedelta(days = 1200)
 
         return start, end
     

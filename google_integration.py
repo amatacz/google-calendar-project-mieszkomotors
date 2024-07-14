@@ -111,9 +111,10 @@ class GoogleServiceIntegrator:
         '''
         for follow_up_number in range(1, 5):
             try:
+                description_html_string = f'Skontaktuj się z<br><b>{event["Imię"]} {event["Nazwisko"]}</b>, właścicielem auta <i>{event["Model"]} {event["Marka"]}</i>.<hr>Dane kontaktowe:<ul><li>Nr telefonu: <a href="tel:{event["Nr_telefonu"]}">{event["Nr_telefonu"]}</a></li><li>E-mail: {event["Adres_e-mail"]}</li></ul><hr>'
                 event_dict_follow_up = {
                 'summary': f'{event["Imię"]} {event["Nazwisko"]} - FOLLOW UP {follow_up_number}',
-                'description': f'Skontaktuj się z {event["Imię"]} {event["Nazwisko"]} właścicielem auta {event["Model"]} {event["Marka"]}.\nDane kontaktowe: {event["Nr_telefonu"]} i {event["Adres_e-mail"]}',
+                'description': description_html_string,
                 'start': {
                     'dateTime': event[f"Follow_up_{follow_up_number}"].strftime('%Y-%m-%dT%H:%M:%S.%f')[:-3] + 'Z',
                     'timeZone': 'Europe/Warsaw',
@@ -131,12 +132,12 @@ class GoogleServiceIntegrator:
                 },
                 'transparency': 'transparent',
                 'visibility': 'private',
-                'colorId': '4'
+                'colorId': '3'
                 }
                 new_calendar_event = self.google_calendar_service.events().insert(calendarId='primary', body=event_dict_follow_up).execute()
                 logger.info(f'Event created: {new_calendar_event.get('summary')}')
             except Exception as e:
-                logger.error(f"Creating event for {event["Imię"]} {event["Nazwisko"]} - {event["Model"]} {event["Marka"]} did not succeed.")
+                logger.error(f"Creating event for {event["Imię"]} {event["Nazwisko"]} - {event["Marka"]} {event["Model"]} did not succeed.")
 
 
     def validate_if_event_already_exists_in_calendar(self, existing_events_list, event_to_be_created) -> bool:
@@ -176,4 +177,4 @@ class GoogleServiceIntegrator:
         for event in events:
             self.google_calendar_service.events().delete(calendarId='primary', eventId=event['id']).execute()
         
-        print("ALL CLEANED")
+        logger.info("Events removed from calendar")

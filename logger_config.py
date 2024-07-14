@@ -7,7 +7,7 @@ def setup_logging():
 
     # Create handlers for displaying msgs in console (c_handler) and write them to the file (f_handler)
     c_handler = logging.StreamHandler()
-    f_handler = RotatingFileHandler('logs/google_events_logger.log', maxBytes=2000, backupCount=5)
+    f_handler = RotatingFileHandler('logs/google_events_logger.log', maxBytes=2000, backupCount=5, encoding='utf-8')
     c_handler.setLevel(logging.WARNING)
     f_handler.setLevel(logging.DEBUG)
 

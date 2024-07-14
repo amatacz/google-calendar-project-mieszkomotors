@@ -56,7 +56,6 @@ def clean_follow_up_events():
 
     # Create google services
     GoogleServiceIntegratorObject.get_google_services()
-
     GoogleServiceIntegratorObject.remove_events_from_calendar("FOLLOW UP", START, END)
 
 main()
