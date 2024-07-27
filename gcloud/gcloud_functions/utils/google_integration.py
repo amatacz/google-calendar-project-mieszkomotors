@@ -67,11 +67,13 @@ class GoogleServiceIntegrator:
                             format: str = "xlsx"):
         # Call the Drive v3 API
         results = (
-            self.google_drive_service.files()
-            .list(pageSize=10, fields="nextPageToken, files(id, name)")
-            .execute()
+            self.google_drive_service.files().list(pageSize=10, fields="nextPageToken, files(id, name)").execute()
         )
+        print("ZNALEZIONE resultsy")
+        print(results)
+
         items = results.get("files", [])
+        
         print("ZNALEZIONE ITEMKI")
         print(items)
 

@@ -13,11 +13,6 @@ def create_new_events(request, context=None):
     # logger.info("Starting main execution.")
     print("Starting main execution.")
 
-    # Get source file URL from env
-    source_file_url = os.getenv('SOURCE_FILE_URL')
-    # if not source_file_url:
-    #     return "Environment variable SOURCE_FILE_URL is not set.", 400
-    
     # Create google services
     GoogleServiceIntegratorObject = GoogleServiceIntegrator()
     GoogleServiceIntegratorObject.get_google_services()

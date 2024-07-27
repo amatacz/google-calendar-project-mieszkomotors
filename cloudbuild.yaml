@@ -12,4 +12,3 @@ steps:
       - --source=./gcloud/gcloud_functions
       - --trigger-http
       - --runtime=python312
-      - --set-env-vars=SOURCE_FILE_URL="https://docs.google.com/spreadsheets/d/1GvAwkCIMPoSAxbfsCbLblEVp0E5CeFw6/edit?usp=sharing&ouid=117563738823996926338&rtpof=true&sd=true"
