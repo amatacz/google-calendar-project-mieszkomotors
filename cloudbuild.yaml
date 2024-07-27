@@ -12,3 +12,12 @@ steps:
       - --source=./gcloud/gcloud_functions
       - --trigger-http
       - --runtime=python312
+  # Step to deploy the Cloud Workflows
+  - name: "gcr.io/google.com/cloudsdktool/cloud-sdk"
+    entrypoint: 'gcloud'
+    args:
+      - workflows
+      - deploy
+      - workflow-google-calendar-events
+      - --source=workflows/workflow-google-calendar-events.yaml
+      - --location=europe-west1
