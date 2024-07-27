@@ -1,7 +1,7 @@
-from gcloud.gcloud_functions.utils.google_integration import GoogleServiceIntegrator
+from utils.google_integration import GoogleServiceIntegrator
 from utils.data_transformation import DataTransformer
 from utils.utils import UtilsConfigurator
-from gcloud.gcloud_functions.utils.logger_config import setup_logging
+from utils.logger_config import setup_logging
 import functions_framework
 
 
