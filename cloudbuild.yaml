@@ -1,4 +1,4 @@
-logsBucket: "gs://air-pollution-build-logs-bucket-amatacz"
+logsBucket: "gs://calendar-events-creation-logs-bucket"
 steps:
   # Steps to deploy functions
   - name: "gcr.io/google.com/cloudsdktool/cloud-sdk"
