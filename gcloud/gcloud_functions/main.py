@@ -35,7 +35,7 @@ def create_new_events(request, context=None):
     if not events_to_be_created:
         # logger.info("No upcoming events - cannot proceed with events creation. Exiting...")
         print("No upcoming events - cannot proceed with events creation. Exiting...")
-        return None
+        return "No upcoming events - cannot proceed with events creation. Exiting..."
     else:
         # Get follow up events from given timeframe
         existing_next_month_follow_up_events = GoogleServiceIntegratorObject.get_follow_up_events_list(START, END)
