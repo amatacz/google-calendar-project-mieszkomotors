@@ -1,0 +1,14 @@
+logsBucket: "gs://air-pollution-build-logs-bucket-amatacz"
+steps:
+  # Steps to deploy functions
+  - name: "gcr.io/google.com/cloudsdktool/cloud-sdk"
+    args:
+      - gcloud
+      - functions
+      - deploy
+      - function-google-calendar-event-creation
+      - --entry-point=create_new_events
+      - --region=europe-west1	
+      - --source=./gcloud/gcloud_functions
+      - --trigger-http
+      - --runtime=python312

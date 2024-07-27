@@ -1,11 +1,15 @@
 from gcloud.gcloud_functions.utils.google_integration import GoogleServiceIntegrator
-from data_transformation import DataTransformer
-from utils import UtilsConfigurator
+from utils.data_transformation import DataTransformer
+from utils.utils import UtilsConfigurator
 from gcloud.gcloud_functions.utils.logger_config import setup_logging
+import functions_framework
 
-logger = setup_logging()
 
-def main():
+
+
+@functions_framework.http
+def create_new_events(request, context=None):
+    logger = setup_logging()
     logger.info("Starting main execution.")
 
     # Create google services
@@ -47,6 +51,8 @@ def main():
                     GoogleServiceIntegratorObject.create_follow_up_events(event_to_be_created)
             logger.info("Process finished successfully.")
 
+    return "Events creation function finished"
+
 def clean_follow_up_events():                   
     GoogleServiceIntegratorObject = GoogleServiceIntegrator()
 
@@ -58,4 +64,4 @@ def clean_follow_up_events():
     GoogleServiceIntegratorObject.get_google_services()
     GoogleServiceIntegratorObject.remove_events_from_calendar("FOLLOW UP", START, END)
 
-main()
+    return "Done"
