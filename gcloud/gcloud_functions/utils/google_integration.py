@@ -1,60 +1,62 @@
 import os.path
+import json
 import logging
 
 from google.auth.transport.requests import Request
-from google.oauth2.credentials import Credentials
+from google.oauth2 import service_account 
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
+from google.cloud import secretmanager
 
 
 logger = logging.getLogger("google_events_logger")
 
 class GoogleServiceIntegrator:
-    creds = None
-    google_drive_service = None
-    google_calendar_service = None
+    def __init__(self):
+        self.creds = None
+        self.google_drive_service = None
+        self.google_calendar_service = None
+
+    def access_secret_version(self, project_id, secret_id, version_id="latest"):
+        name = f"projects/{project_id}/secrets/{secret_id}/versions/{version_id}"
+        response = secretmanager.SecretManagerServiceClient().access_secret_version(name=name)
+        return response.payload.data.decode('UTF-8')
 
     def get_google_services(self):
-    
-        """Shows basic usage of the Drive v3 API.
-        Prints the names and ids of the first 10 files the user has access to.
-        """
-        # If modifying these scopes, delete the file token.json.
-        SCOPES = ["https://www.googleapis.com/auth/drive.metadata.readonly",
-                  "https://www.googleapis.com/auth/calendar",
-                  "https://www.googleapis.com/auth/calendar.events"]
-
-        # The file token.json stores the user's access and refresh tokens, and is
-        # created automatically when the authorization flow completes for the first time.
-        if os.path.exists("secrets/token.json"):
-            self.creds = Credentials.from_authorized_user_file("secrets/token.json", SCOPES)
-
-        # If there are no (valid) credentials available, let the user log in.
-        if not self.creds or not self.creds.valid:
-            if self.creds and self.creds.expired and self.creds.refresh_token:
-                self.creds.refresh(Request())
-            else:
-                flow = InstalledAppFlow.from_client_secrets_file(
-                    "secrets/credentials.json", SCOPES
-                )
-                self.creds = flow.run_local_server(port=0)
-                # Save the credentials for the next run
-            with open("secrets/token.json", "w") as token:
-                token.write(self.creds.to_json())
-
-        try:
-            self.google_drive_service = build("drive", "v3", credentials=self.creds)
-            logger.info("Google Drive Service created.")
-        except Exception as e:
-            logger.error(f"Error occured while creating Google Drive Service: {e}")
+        """Authenticate and create Google Drive and Calendar services using service account credentials."""
         
+        project_id = '481715545022'
+        secret_id = 'google-calendar-key'
+
         try:
-            self.google_calendar_service = build("calendar", "v3", credentials=self.creds)
+            # Access the secret from Secret Manager
+            key_data = self.access_secret_version(project_id, secret_id)
+            service_account_info = json.loads(key_data)
+
+            # Define the scopes required
+            SCOPES = [
+                "https://www.googleapis.com/auth/drive.metadata.readonly",
+                "https://www.googleapis.com/auth/calendar",
+                "https://www.googleapis.com/auth/calendar.events"
+            ]
+
+            # Authenticate using the service account credentials
+            credentials = service_account.Credentials.from_service_account_info(
+                service_account_info, scopes=SCOPES)
+
+            # Build the Google Drive service
+            self.google_drive_service = build("drive", "v3", credentials=credentials)
+            logger.info("Google Drive Service created.")
+
+            # Build the Google Calendar service
+            self.google_calendar_service = build("calendar", "v3", credentials=credentials)
             logger.info("Google Calendar Service created.")
+
         except Exception as e:
-            logger.error(f"Error occured while creating Google Calendar Service: {e}")
-            
+            logger.error(f"Error occurred while creating Google services: {e}")
+            raise e
+        
         return self.google_drive_service, self.google_calendar_service
 
     def get_source_file_url(self,
@@ -160,7 +162,6 @@ class GoogleServiceIntegrator:
         # formatting and cutting off last 3 digits to get rid of microseconds) and append 'Z'
         start_date_formatted = start_date.strftime('%Y-%m-%dT%H:%M:%S.%f')[:-3] + 'Z'
         end_date_formatted = end_date.strftime('%Y-%m-%dT%H:%M:%S.%f')[:-3] + 'Z'
-
         # Get list of all follow up events from calendar (uncomment timeMax to remove events from specific period)
         events_result = (
             self.google_calendar_service.events().list(
