@@ -21,3 +21,17 @@ steps:
       - workflow-google-calendar-events
       - --source=workflows/workflow-google-calendar-events.yaml
       - --location=europe-west1
+  # Step to create Cloud Workflows Scheduler
+  - name: "gcr.io/google.com/cloudsdktool/cloud-sdk"
+    entrypoint: 'gcloud'
+    args:
+      - scheduler
+      - jobs
+      - create
+      - http
+      - workflow-google-calendar-events-scheduler
+      - --schedule="0 6 * * 1"
+      - --uri="https://workflowexecutions.googleapis.com/v1/projects/sinuous-tuner-428711-f2/locations/europe-west1/workflows/workflow-google-calendar-events/executions"
+      - --http-method=POST
+      - --time-zone="Europe/Warsaw"
+      - --oidc-service-account-email="google-calendar-account@sinuous-tuner-428711-f2.iam.gserviceaccount.com"
