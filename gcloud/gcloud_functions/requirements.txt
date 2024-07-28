@@ -9,7 +9,7 @@ google-cloud-secret-manager==2.20.1
 googleapis-common-protos==1.63.2
 googletrans==3.0.0
 grpc-google-iam-v1==0.13.1
-google-cloud-logging-==3.11.0
+google-cloud-logging==3.11.0
 grpcio==1.65.1
 grpcio-status==1.65.1
 oauthlib==3.2.2
