@@ -1,4 +1,15 @@
 logsBucket: "gs://calendar-events-creation-logs-bucket"
+# Step to create a logging sink
+  - name: "gcr.io/google.com/cloudsdktool/cloud-sdk"
+    entrypoint: 'bash'
+    args:
+      - -c
+      - |
+        gcloud logging sinks create my-log-sink storage.googleapis.com/calendar-events-creation-logs-bucket \
+          --log-filter='resource.type="cloud_function" AND resource.labels.function_name="function-google-calendar-event-creation"' \
+          --project=sinuous-tuner-428711-f2
+        SERVICE_ACCOUNT=$(gcloud logging sinks describe my-log-sink --format='value(writerIdentity)' --project=sinuous-tuner-428711-f2)
+        gsutil iam ch ${SERVICE_ACCOUNT}:objectCreator gs://calendar-events-creation-logs-bucket
 steps:
   # Steps to deploy functions
   - name: "gcr.io/google.com/cloudsdktool/cloud-sdk"
@@ -12,6 +23,7 @@ steps:
       - --source=./gcloud/gcloud_functions
       - --trigger-http
       - --runtime=python312
+      - --memory=1GB
       - --set-env-vars=SOURCE_FILE_URL=https://docs.google.com/spreadsheets/d/1GvAwkCIMPoSAxbfsCbLblEVp0E5CeFw6/export?format=xlsx
   # Step to deploy the Cloud Workflows
   - name: "gcr.io/google.com/cloudsdktool/cloud-sdk"
