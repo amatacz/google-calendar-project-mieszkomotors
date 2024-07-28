@@ -1,5 +1,6 @@
 logsBucket: "gs://calendar-events-creation-logs-bucket"
-# Step to create a logging sink
+steps:
+  # Step to create a logging sink
   - name: "gcr.io/google.com/cloudsdktool/cloud-sdk"
     entrypoint: 'bash'
     args:
@@ -10,7 +11,6 @@ logsBucket: "gs://calendar-events-creation-logs-bucket"
           --project=sinuous-tuner-428711-f2
         SERVICE_ACCOUNT=$(gcloud logging sinks describe my-log-sink --format='value(writerIdentity)' --project=sinuous-tuner-428711-f2)
         gsutil iam ch ${SERVICE_ACCOUNT}:objectCreator gs://calendar-events-creation-logs-bucket
-steps:
   # Steps to deploy functions
   - name: "gcr.io/google.com/cloudsdktool/cloud-sdk"
     args:
