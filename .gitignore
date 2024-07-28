@@ -8,7 +8,7 @@ pip-log.txt
 pip-delete-this-directory.txt
 
 # Operation logs
-
+logs/
 
 # Environments
 .env

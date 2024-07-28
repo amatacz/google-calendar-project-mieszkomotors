@@ -12,7 +12,7 @@ steps:
       - --source=./gcloud/gcloud_functions
       - --trigger-http
       - --runtime=python312
-      - --set-env-vars=SOURCE_FILE_URL=https://docs.google.com/spreadsheets/d/1GvAwkCIMPoSAxbfsCbLblEVp0E5CeFw6/export?format=xlsx"
+      - --set-env-vars=SOURCE_FILE_URL=https://docs.google.com/spreadsheets/d/1GvAwkCIMPoSAxbfsCbLblEVp0E5CeFw6/export?format=xlsx
   # Step to deploy the Cloud Workflows
   - name: "gcr.io/google.com/cloudsdktool/cloud-sdk"
     entrypoint: 'gcloud'
