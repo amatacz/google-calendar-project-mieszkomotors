@@ -13,6 +13,8 @@ def create_new_events(request, context=None):
     # logger.info("Starting main execution.")
     print("Starting main execution.")
 
+    SOURCE_FILE_URL = os.getenv("SOURCE_FILE_URL")
+
     # Create google services
     GoogleServiceIntegratorObject = GoogleServiceIntegrator()
     GoogleServiceIntegratorObject.get_google_services()
@@ -27,8 +29,8 @@ def create_new_events(request, context=None):
 
     # Get file, transform it and get list of events to be created
     # source_file_url = GoogleServiceIntegratorObject.get_source_file_url()
-    # source_file = DataTransformerObject.load_source_file_from_gdrive(source_file_url)
-    source_file = DataTransformerObject.load_source_file_from_gdrive("https://docs.google.com/spreadsheets/d/1GvAwkCIMPoSAxbfsCbLblEVp0E5CeFw6/export?format=xlsx")
+    source_file = DataTransformerObject.load_source_file_from_gdrive(SOURCE_FILE_URL)
+    # source_file = DataTransformerObject.load_source_file_from_gdrive("https://docs.google.com/spreadsheets/d/1GvAwkCIMPoSAxbfsCbLblEVp0E5CeFw6/export?format=xlsx")
     source_file_transformed = DataTransformerObject.transform_file(source_file)
     events_to_be_created = DataTransformerObject.get_dict_of_events_from_timeframe(source_file_transformed, START, END)
         
