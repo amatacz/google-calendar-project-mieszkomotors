@@ -1,6 +1,4 @@
 import datetime
-from logging.handlers import RotatingFileHandler
-
 
 class UtilsConfigurator:
     def timeframe_window(self) -> (datetime, datetime): # type: ignore
