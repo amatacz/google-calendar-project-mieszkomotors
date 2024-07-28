@@ -5,8 +5,8 @@ from google.cloud import logging
 
 
 def setup_logging():
-    logger = logging.Client()
-    logger.logger("google_events_logger")
+    logging_client = logging.Client()
+    logger = logging_client.logger("google_events_logger")
 
     # # Create handlers for displaying msgs in console (c_handler) and write them to the file (f_handler)
     # c_handler = logging.StreamHandler()
