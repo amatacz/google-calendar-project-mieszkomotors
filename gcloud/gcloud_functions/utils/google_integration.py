@@ -1,5 +1,7 @@
 import json
-from google.oauth2 import service_account 
+from google.oauth2 import service_account
+from google.oauth2.credentials import Credentials
+from google.auth.transport.requests import Request 
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 from google.cloud import secretmanager
@@ -22,12 +24,12 @@ class GoogleServiceIntegrator:
         """Authenticate and create Google Drive and Calendar services using service account credentials."""
         
         project_id = '481715545022'
-        secret_id = 'google-calendar-key'
+        secret_id = 'oauth-google-calendar-project'
 
         try:
             # Access the secret from Secret Manager
-            key_data = self.access_secret_version(project_id, secret_id)
-            service_account_info = json.loads(key_data)
+            service_account_info = json.loads(self.access_secret_version(project_id, secret_id))
+            refresh_token = self.access_secret_version(project_id, secret_id)
 
             # Define the scopes required
             SCOPES = [
@@ -37,8 +39,14 @@ class GoogleServiceIntegrator:
             ]
 
             # Authenticate using the service account credentials
-            credentials = service_account.Credentials.from_service_account_info(
-                service_account_info, scopes=SCOPES)
+            credentials = Credentials.from_authorized_user_info(info={
+                'client_id': service_account_info['installed']['client_id'],
+                'client_secret': service_account_info['installed']['client_secret'],
+                'refresh_token': refresh_token},
+                scopes=SCOPES)
+            
+            if credentials.expired:
+                credentials.refresh(Request())
 
             # Build the Google Drive service
             self.google_drive_service = build("drive", "v3", credentials=credentials)
