@@ -4,7 +4,7 @@ from google.oauth2.credentials import Credentials
 from google.auth.transport.requests import Request 
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
-from google.cloud import secretmanager
+from google.cloud.secretmanager import SecretManagerServiceClient 
 
 
 # logger = logging.getLogger("google_events_logger")
@@ -15,21 +15,37 @@ class GoogleServiceIntegrator:
         self.google_drive_service = None
         self.google_calendar_service = None
 
-    def access_secret_version(self, project_id, secret_id, version_id="latest"):
+    def get_secret(self, project_id, secret_id, version_id="latest"):
         name = f"projects/{project_id}/secrets/{secret_id}/versions/{version_id}"
-        response = secretmanager.SecretManagerServiceClient().access_secret_version(name=name)
+        response = SecretManagerServiceClient().access_secret_version(name=name)
         return response.payload.data.decode('UTF-8')
+    
+    def update_secret(self, project_id, secret_id, secret_value):
+        parent = SecretManagerServiceClient().secret_path(project_id, secret_id)
+        SecretManagerServiceClient().add_secret_version(
+            request={"parent": parent, "payload": {"data": secret_value.encode("UTF-8")}}
+            )
+        
+    def get_credentials(self, project_id, secret_id):
+        creds_json = self.get_secret(project_id, secret_id)
+        creds_data = json.loads(creds_json)
+        creds = Credentials.from_authorized_user_info(creds_data)
+        
+        if creds and creds.expired and creds.refresh_token:
+            creds.refresh(Request())
+            self.update_secret(project_id, secret_id, creds.to_json())
+        
+        return creds
 
     def get_google_services(self):
         """Authenticate and create Google Drive and Calendar services using service account credentials."""
         
         project_id = '481715545022'
-        secret_id = 'oauth-google-calendar-project'
-
+        secret_id = 'oauth-token-google-calendar-project'
+        
         try:
             # Access the secret from Secret Manager
-            service_account_info = json.loads(self.access_secret_version(project_id, secret_id))
-            refresh_token = self.access_secret_version(project_id, secret_id)
+            credentials = self.get_credentials(project_id, secret_id)
 
             # Define the scopes required
             SCOPES = [
@@ -37,16 +53,6 @@ class GoogleServiceIntegrator:
                 "https://www.googleapis.com/auth/calendar",
                 "https://www.googleapis.com/auth/calendar.events"
             ]
-
-            # Authenticate using the service account credentials
-            credentials = Credentials.from_authorized_user_info(info={
-                'client_id': service_account_info['installed']['client_id'],
-                'client_secret': service_account_info['installed']['client_secret'],
-                'refresh_token': refresh_token},
-                scopes=SCOPES)
-            
-            if credentials.expired:
-                credentials.refresh(Request())
 
             # Build the Google Drive service
             self.google_drive_service = build("drive", "v3", credentials=credentials)
@@ -72,13 +78,7 @@ class GoogleServiceIntegrator:
         results = (
             self.google_drive_service.files().list(pageSize=10, fields="nextPageToken, files(id, name)").execute()
         )
-        print("ZNALEZIONE resultsy")
-        print(results)
-
         items = results.get("files", [])
-        
-        print("ZNALEZIONE ITEMKI")
-        print(items)
 
         if not items:
             # logger.error("No source files found.")

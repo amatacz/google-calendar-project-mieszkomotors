@@ -13,11 +13,6 @@ def create_new_events(request, context=None):
     logger.log_text("Starting main execution.")
 
     print("Starting main execution.")
-
-    # Get env var
-    SOURCE_FILE_URL = os.getenv("SOURCE_FILE_URL")
-    if not SOURCE_FILE_URL:
-        return "Environment variable SOURCE_FILE_URL is not set.", 400
     
     # Create google services
     GoogleServiceIntegratorObject = GoogleServiceIntegrator()
@@ -30,6 +25,7 @@ def create_new_events(request, context=None):
     DataConfiguratorObject = UtilsConfigurator()
     START, END = DataConfiguratorObject.timeframe_window()
 
+    SOURCE_FILE_URL = GoogleServiceIntegratorObject.get_source_file_url()
 
     # Get file, transform it and get list of events to be created
     source_file = DataTransformerObject.load_source_file_from_gdrive(SOURCE_FILE_URL)
