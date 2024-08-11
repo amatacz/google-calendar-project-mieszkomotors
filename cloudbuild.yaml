@@ -1,20 +1,20 @@
 logsBucket: "gs://calendar-events-creation-logs-bucket"
 steps:
-  # Step to check and create a logging sink if it doesn't exist
-  - name: "gcr.io/google.com/cloudsdktool/cloud-sdk"
-    entrypoint: 'bash'
-    args:
-      - -c
-      - |
-        if ! gcloud logging sinks describe my-log-sink --project=sinuous-tuner-428711-f2 > /dev/null 2>&1; then
-          gcloud logging sinks create my-log-sink storage.googleapis.com/your-log-bucket \
-            --log-filter='resource.type="cloud_function" AND resource.labels.function_name="function-google-calendar-event-creation"' \
-            --project=sinuous-tuner-428711-f2;
-          SERVICE_ACCOUNT=$(gcloud logging sinks describe my-log-sink --format='value(writerIdentity)' --project=sinuous-tuner-428711-f2);
-          gsutil iam ch ${SERVICE_ACCOUNT}:objectCreator gs://calendar-events-creation-logs-bucket;
-        else
-          echo "Sink my-log-sink already exists, skipping creation.";
-        fi
+  # # Step to check and create a logging sink if it doesn't exist
+  # - name: "gcr.io/google.com/cloudsdktool/cloud-sdk"
+  #   entrypoint: 'bash'
+  #   args:
+  #     - -c
+  #     - |
+  #       if ! gcloud logging sinks describe my-log-sink --project=sinuous-tuner-428711-f2 > /dev/null 2>&1; then
+  #         gcloud logging sinks create my-log-sink storage.googleapis.com/your-log-bucket \
+  #           --log-filter='resource.type="cloud_function" AND resource.labels.function_name="function-google-calendar-event-creation"' \
+  #           --project=sinuous-tuner-428711-f2;
+  #         SERVICE_ACCOUNT=$(gcloud logging sinks describe my-log-sink --format='value(writerIdentity)' --project=sinuous-tuner-428711-f2);
+  #         gsutil iam ch ${SERVICE_ACCOUNT}:objectCreator gs://calendar-events-creation-logs-bucket;
+  #       else
+  #         echo "Sink my-log-sink already exists, skipping creation.";
+  #       fi
   # Steps to deploy functions
   - name: "gcr.io/google.com/cloudsdktool/cloud-sdk"
     args:
