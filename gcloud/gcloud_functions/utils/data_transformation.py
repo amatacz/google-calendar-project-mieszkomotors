@@ -3,7 +3,6 @@ import requests
 from io import BytesIO
 import logging
 
-logger = logging.getLogger("google_events_logger")
 
 class DataTransformer:
 
@@ -26,7 +25,6 @@ class DataTransformer:
             df = pd.read_excel(data)
             return df
         else:
-            logger.error(f"Failed to download the file. Status code: {response.status_code}")
             return None
 
     def transform_file(self, df):
@@ -45,15 +43,13 @@ class DataTransformer:
     
     def get_dict_of_events_from_timeframe(self, df, event_start_day, event_end_day):
             # Get new events
-            logger.info(f"Getting events occuring between {event_start_day} and {event_end_day}.")
             try:
                 events = df[(df["Follow_up_1"] >= event_start_day) & (df["Follow_up_1"] <= event_end_day)]
                 events.reset_index(drop=True, inplace=True)
                     
                 # Save events as dictionary
                 events_dict = events.to_dict(orient="index")
-                logger.info("Events succesfully fetched.")
                 return events_dict
             except Exception as e:
-                logger.error(f"Error occured while catching new events: {e}")
+                print(f"Error occured while catching new events: {e}")
 

@@ -7,8 +7,6 @@ from googleapiclient.errors import HttpError
 from google.cloud.secretmanager import SecretManagerServiceClient 
 
 
-# logger = logging.getLogger("google_events_logger")
-
 class GoogleServiceIntegrator:
     def __init__(self):
         self.creds = None
@@ -16,17 +14,27 @@ class GoogleServiceIntegrator:
         self.google_calendar_service = None
 
     def get_secret(self, project_id, secret_id, version_id="latest"):
+        """
+        Get value of given secret from Secret Manager
+        """
         name = f"projects/{project_id}/secrets/{secret_id}/versions/{version_id}"
         response = SecretManagerServiceClient().access_secret_version(name=name)
         return response.payload.data.decode('UTF-8')
     
     def update_secret(self, project_id, secret_id, secret_value):
+        """
+        Update secret with new token if expired and save it to secrets manager obj
+        """
         parent = SecretManagerServiceClient().secret_path(project_id, secret_id)
         SecretManagerServiceClient().add_secret_version(
             request={"parent": parent, "payload": {"data": secret_value.encode("UTF-8")}}
             )
         
     def get_credentials(self, project_id, secret_id):
+        """
+        Authenticate user using secrets from Secret Manager.
+        Update token if expired.
+        """
         creds_json = self.get_secret(project_id, secret_id)
         creds_data = json.loads(creds_json)
         creds = Credentials.from_authorized_user_info(creds_data)
@@ -56,16 +64,13 @@ class GoogleServiceIntegrator:
 
             # Build the Google Drive service
             self.google_drive_service = build("drive", "v3", credentials=credentials)
-            # logger.info("Google Drive Service created.")
             print("Google Drive Service created.")
 
             # Build the Google Calendar service
             self.google_calendar_service = build("calendar", "v3", credentials=credentials)
-            # logger.info("Google Calendar Service created.")
             print("Google Calendar Service created.")
 
         except Exception as e:
-           # logger.error(f"Error occurred while creating Google services: {e}")
             print(f"Error occurred while creating Google services: {e}")
             raise e
         
@@ -81,7 +86,6 @@ class GoogleServiceIntegrator:
         items = results.get("files", [])
 
         if not items:
-            # logger.error("No source files found.")
             print("No source files found.")
             return None
         for item in items:
@@ -113,11 +117,9 @@ class GoogleServiceIntegrator:
             if events:
                 return events
             else:
-                # logger.info("No follow up events found.")
                 print("No follow up events found.")
                 return []
         except HttpError as e:
-            # logger.error(f"An error occurred: {e}")
             print(f"An error occurred: {e}")
 
     def create_follow_up_events(self, event: dict):
@@ -150,10 +152,8 @@ class GoogleServiceIntegrator:
                 'colorId': '3'
                 }
                 new_calendar_event = self.google_calendar_service.events().insert(calendarId='primary', body=event_dict_follow_up).execute()
-                # logger.info(f'Event created: {new_calendar_event.get('summary')}')
                 print(f'Event created: {new_calendar_event.get('summary')}')
             except Exception as e:
-                # logger.error(f"Creating event for {event["Imię"]} {event["Nazwisko"]} - {event["Marka"]} {event["Model"]} did not succeed.")
                 print(f"Creating event for {event["Imię"]} {event["Nazwisko"]} - {event["Marka"]} {event["Model"]} did not succeed.")
 
 
@@ -165,11 +165,9 @@ class GoogleServiceIntegrator:
 
         # Validate if event that we want to create already exists
         if event_to_be_created_summary in existing_events_list_summaries:
-            # logger.info(f"Event {event_to_be_created_summary} already exits!")
             print(f"Event {event_to_be_created_summary} already exits!")
             return False
         else:
-                # logger.info(f"This event does not exists. Creating event for {event_to_be_created["Imię"]} {event_to_be_created["Nazwisko"]}")
                 print(f"This event does not exists. Creating event for {event_to_be_created["Imię"]} {event_to_be_created["Nazwisko"]}")
                 return True
         
@@ -195,5 +193,4 @@ class GoogleServiceIntegrator:
         for event in events:
             self.google_calendar_service.events().delete(calendarId='primary', eventId=event['id']).execute()
         
-        # logger.info("Events removed from calendar")
         print("Events removed from calendar")

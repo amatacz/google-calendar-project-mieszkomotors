@@ -3,14 +3,30 @@ import json
 from google_auth_oauthlib.flow import Flow
 from google.oauth2.credentials import Credentials
 
+
 # If modifying these scopes, delete the file token.json.
 SCOPES = ['https://www.googleapis.com/auth/gmail.modify',
           'https://www.googleapis.com/auth/drive',
           'https://www.googleapis.com/auth/calendar']
 
+def save_credentials(credentials):
+    creds_data = {
+        'token': credentials.token,
+        'refresh_token': credentials.refresh_token,
+        'token_uri': credentials.token_uri,
+        'client_id': credentials.client_id,
+        'client_secret': credentials.client_secret,
+        'scopes': credentials.scopes
+    }
+    
+    with open('token.json', 'w') as token_file:
+        json.dump(creds_data, token_file)
+    
+    print("Credentials saved to 'token.json'")
+
 def perform_oauth_flow(path_to_secrets):
     # Load client secrets from the downloaded JSON file
-    client_secrets_file = path_to_secretspath_to_secrets
+    client_secrets_file = path_to_secrets
     
     flow = Flow.from_client_secrets_file(
         client_secrets_file,
@@ -36,20 +52,6 @@ def perform_oauth_flow(path_to_secrets):
     print("OAuth flow completed successfully.")
     return credentials
 
-def save_credentials(credentials):
-    creds_data = {
-        'token': credentials.token,
-        'refresh_token': credentials.refresh_token,
-        'token_uri': credentials.token_uri,
-        'client_id': credentials.client_id,
-        'client_secret': credentials.client_secret,
-        'scopes': credentials.scopes
-    }
-    
-    with open('token.json', 'w') as token_file:
-        json.dump(creds_data, token_file)
-    
-    print("Credentials saved to 'token.json'")
 
 if __name__ == '__main__':
     perform_oauth_flow("C:\\Users\\amatacz\\OneDrive - DXC Production\\Desktop\\moje\\GoogleCalendarPythonIntegration\\secrets\\oauth-token-google-calendar-project.json")
