@@ -38,7 +38,7 @@ class GoogleServiceIntegrator:
         creds_json = self.get_secret(project_id, secret_id)
         creds_data = json.loads(creds_json)
         creds = Credentials.from_authorized_user_info(creds_data)
-        creds_expiration_date = creds.expired
+        creds_expiration_date = creds.expiry
         creds_refresh_token = creds.refresh_token
         if creds_expiration_date:
             print(f"CREDENTAILS EXPIRATION DATE: {creds_expiration_date}")
