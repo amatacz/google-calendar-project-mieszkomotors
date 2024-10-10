@@ -23,7 +23,7 @@ class GoogleServiceIntegrator:
     
     def update_secret(self, project_id, secret_id, secret_value):
         """
-        Update secret with new token if expired and save it to secrets manager obj
+        Update secret with new secret if expired and save it to secrets manager obj
         """
         parent = SecretManagerServiceClient().secret_path(project_id, secret_id)
         SecretManagerServiceClient().add_secret_version(
@@ -38,8 +38,14 @@ class GoogleServiceIntegrator:
         creds_json = self.get_secret(project_id, secret_id)
         creds_data = json.loads(creds_json)
         creds = Credentials.from_authorized_user_info(creds_data)
+        creds_expiration_date = creds.expired
+        creds_refresh_token = creds.refresh_token
+        if creds_expiration_date:
+            print(f"CREDENTAILS EXPIRATION DATE: {creds_expiration_date}")
+        if creds_refresh_token:
+            print(f"CREDENTAILS REFRESH TOKEN FOUND")
         
-        if creds and creds.expired and creds.refresh_token:
+        if creds and creds_expiration_date and creds_refresh_token:
             creds.refresh(Request())
             self.update_secret(project_id, secret_id, creds.to_json())
         

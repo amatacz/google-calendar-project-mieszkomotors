@@ -6,6 +6,7 @@ from google.oauth2.credentials import Credentials
 
 # If modifying these scopes, delete the file token.json.
 SCOPES = ['https://www.googleapis.com/auth/gmail.modify',
+          'https://www.googleapis.com/auth/gmail.send',
           'https://www.googleapis.com/auth/drive',
           'https://www.googleapis.com/auth/calendar']
 
@@ -54,4 +55,4 @@ def perform_oauth_flow(path_to_secrets):
 
 
 if __name__ == '__main__':
-    perform_oauth_flow("C:\\Users\\amatacz\\OneDrive - DXC Production\\Desktop\\moje\\GoogleCalendarPythonIntegration\\secrets\\oauth-token-google-calendar-project.json")
+    perform_oauth_flow("C:\\Users\\amatacz\\OneDrive - DXC Production\\Desktop\\moje\\GoogleCalendarPythonIntegration\\secrets\\oauth_credentials.json")
