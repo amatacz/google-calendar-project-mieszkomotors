@@ -23,7 +23,7 @@ steps:
       - --entry-point=refresh_secrets
       - --region=europe-west1
       - --source=./gcloud/gcloud_functions
-      - --trigger=http
+      - --trigger-http
       - --runtime=python312
       - --memory=1GB  
       - --set-env-vars=PROJECT_ID=481715545022,SECRET_ID=oauth-token-google-calendar-project
