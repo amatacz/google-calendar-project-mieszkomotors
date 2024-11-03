@@ -40,10 +40,6 @@ class GoogleServiceIntegrator:
         creds = Credentials.from_authorized_user_info(creds_data)
         creds_expiration_date = creds.expiry
         creds_refresh_token = creds.refresh_token
-        if creds_expiration_date:
-            print(f"CREDENTAILS EXPIRATION DATE: {creds_expiration_date}")
-        if creds_refresh_token:
-            print(f"CREDENTAILS REFRESH TOKEN FOUND")
         
         if creds and creds_expiration_date and creds_refresh_token:
             creds.refresh(Request())
