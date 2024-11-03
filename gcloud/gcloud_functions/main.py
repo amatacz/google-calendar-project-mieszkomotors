@@ -75,5 +75,6 @@ def refresh_secrets(request, context=None):
     PROJECT_ID = os.getenv("PROJECT_ID")
     SECRET_ID = os.getenv("SECRET_ID")
 
-    GoogleServiceIntegrator.get_credentials(project_id=PROJECT_ID,
+    GoogleServiceIntegratorObject = GoogleServiceIntegrator()
+    GoogleServiceIntegratorObject.get_credentials(project_id=PROJECT_ID,
                                             secret_id=SECRET_ID) 
