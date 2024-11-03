@@ -13,7 +13,20 @@ steps:
       - --trigger-http
       - --runtime=python312
       - --memory=1GB
-      # - --set-env-vars=SOURCE_FILE_URL=https://docs.google.com/spreadsheets/d/1GvAwkCIMPoSAxbfsCbLblEVp0E5CeFw6/export?format=xlsx
+      - --set-env-vars=SOURCE_FILE_URL=https://docs.google.com/spreadsheets/d/1GvAwkCIMPoSAxbfsCbLblEVp0E5CeFw6/export?format=xlsx
+  - name: "gcr.io/google.com/cloudsdktool/cloud-sdk"
+    args:
+      - gcloud
+      - functions
+      - deploy
+      - function-refresh-secrets
+      - --entry-point=refresh_secrets
+      - --region=europe-west1
+      - --source=./gcloud/gcloud_functions
+      - --trigger=http
+      - --runtime=python312
+      - --memory=1GB  
+      - --set-env-vars=PROJECT_ID=481715545022,SECRET_ID=oauth-token-google-calendar-project
   # Step to deploy the Cloud Workflows
   - name: "gcr.io/google.com/cloudsdktool/cloud-sdk"
     entrypoint: 'gcloud'
@@ -22,4 +35,12 @@ steps:
       - deploy
       - workflow-google-calendar-events
       - --source=workflows/workflow-google-calendar-events.yaml
+      - --location=europe-west1
+  - name: "gcr.io/google.com/cloudsdktool/cloud-sdk"
+    entrypoint: 'gcloud'
+    args:
+      - workflows
+      - deploy
+      - workflow-refresh-secrets
+      - --source=workflows/workflow-refresh-secrets.yaml
       - --location=europe-west1

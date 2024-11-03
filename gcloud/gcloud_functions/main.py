@@ -8,8 +8,8 @@ import os
 
 @functions_framework.http
 def create_new_events(request, context=None):
-    print("Starting main execution.")
-    
+    print("Starting main execution.") 
+
     # Create google services
     GoogleServiceIntegratorObject = GoogleServiceIntegrator()
     GoogleServiceIntegratorObject.get_google_services()
@@ -21,9 +21,9 @@ def create_new_events(request, context=None):
     DataConfiguratorObject = UtilsConfigurator()
     START, END = DataConfiguratorObject.timeframe_window()
 
-    # Get url of source file
-    # SOURCE_FILE_URL = GoogleServiceIntegratorObject.get_source_file_url()
-    SOURCE_FILE_URL = "https://docs.google.com/spreadsheets/d/1GvAwkCIMPoSAxbfsCbLblEVp0E5CeFw6/export?format=xlsx"
+    # Get SOURCE_FILE_URL from env
+    SOURCE_FILE_URL = os.getenv("SOURCE_FILE_URL")
+
     # Get file, transform it and get list of events to be created
     source_file = DataTransformerObject.load_source_file_from_gdrive(SOURCE_FILE_URL)
     source_file_transformed = DataTransformerObject.transform_file(source_file)
@@ -70,8 +70,10 @@ def clean_follow_up_events():
     return "Done"
 
 @functions_framework.http
-def refresh_token(request, context=None):
-    project_id = '481715545022'
-    secret_id = 'oauth-token-google-calendar-project'
-    GoogleServiceIntegrator.get_credentials(project_id=project_id,
-                                            secret_id=secret_id) 
+def refresh_secrets(request, context=None):
+
+    PROJECT_ID = os.getenv("PROJECT_ID")
+    SECRET_ID = os.getenv("SECRET_ID")
+
+    GoogleServiceIntegrator.get_credentials(project_id=PROJECT_ID,
+                                            secret_id=SECRET_ID) 
