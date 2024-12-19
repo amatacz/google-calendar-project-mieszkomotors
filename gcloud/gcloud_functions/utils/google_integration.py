@@ -1,10 +1,9 @@
 import json
-from google.oauth2 import service_account
 from google.oauth2.credentials import Credentials
-from google.auth.transport.requests import Request 
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 from google.cloud.secretmanager import SecretManagerServiceClient 
+import os
 
 
 class GoogleServiceIntegrator:
@@ -38,24 +37,24 @@ class GoogleServiceIntegrator:
         creds_json = self.get_secret(project_id, secret_id)
         creds_data = json.loads(creds_json)
         creds = Credentials.from_authorized_user_info(creds_data)
-        creds_expiration_date = creds.expiry
-        creds_refresh_token = creds.refresh_token
+        # creds_expiration_date = creds.expiry
+        # creds_refresh_token = creds.refresh_token
         
-        if creds and creds_expiration_date and creds_refresh_token:
-            creds.refresh(Request())
-            self.update_secret(project_id, secret_id, creds.to_json())
+        # if creds and creds_expiration_date and creds_refresh_token:
+        #     creds.refresh(Request())
+        #     self.update_secret(project_id, secret_id, creds.to_json())
         
         return creds
 
     def get_google_services(self):
         """Authenticate and create Google Drive and Calendar services using service account credentials."""
         
-        project_id = '481715545022'
-        secret_id = 'oauth-token-google-calendar-project'
+        PROJECT_ID = os.getenv("PROJECT_ID")
+        SECRET_ID = os.getenv("SECRET_ID")
         
         try:
             # Access the secret from Secret Manager
-            credentials = self.get_credentials(project_id, secret_id)
+            credentials = self.get_credentials(PROJECT_ID, SECRET_ID)
 
             # Define the scopes required
             SCOPES = [
@@ -78,21 +77,21 @@ class GoogleServiceIntegrator:
         
         return self.google_drive_service, self.google_calendar_service
 
-    def get_source_file_url(self,
-                            file_name: str = "MieszkoMotors_praca.xlsx",
-                            format: str = "xlsx"):
-        # Call the Drive v3 API
-        results = (
-            self.google_drive_service.files().list(pageSize=10, fields="nextPageToken, files(id, name)").execute()
-        )
-        items = results.get("files", [])
+    # def get_source_file_url(self,
+    #                         file_name: str = "MieszkoMotors_praca.xlsx",
+    #                         format: str = "xlsx"):
+    #     # Call the Drive v3 API
+    #     results = (
+    #         self.google_drive_service.files().list(pageSize=10, fields="nextPageToken, files(id, name)").execute()
+    #     )
+    #     items = results.get("files", [])
 
-        if not items:
-            print("No source files found.")
-            return None
-        for item in items:
-            if item['name'] == file_name:
-                return f"https://docs.google.com/spreadsheets/d/{item["id"]}/export?format={format}"
+    #     if not items:
+    #         print("No source files found.")
+    #         return None
+    #     for item in items:
+    #         if item['name'] == file_name:
+    #             return f"https://docs.google.com/spreadsheets/d/{item["id"]}/export?format={format}"
 
 
     def get_follow_up_events_list(self, start_date = None, end_date = None):

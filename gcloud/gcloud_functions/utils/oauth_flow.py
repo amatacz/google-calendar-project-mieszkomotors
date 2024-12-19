@@ -55,4 +55,4 @@ def perform_oauth_flow(path_to_secrets):
 
 
 if __name__ == '__main__':
-    perform_oauth_flow("C:\\Users\\amatacz\\OneDrive - DXC Production\\Desktop\\moje\\GoogleCalendarPythonIntegration\\secrets\\oauth_credentials.json")
+    perform_oauth_flow("C:\\Users\\amatacz\\moje\\GoogleCalendarPythonIntegration\\secrets\\oauth_credentials.json")

@@ -78,3 +78,4 @@ def refresh_secrets(request, context=None):
     GoogleServiceIntegratorObject = GoogleServiceIntegrator()
     GoogleServiceIntegratorObject.get_credentials(project_id=PROJECT_ID,
                                             secret_id=SECRET_ID) 
+    return "Secrets refreshed."
