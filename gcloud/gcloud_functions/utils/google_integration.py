@@ -29,7 +29,7 @@ class GoogleServiceIntegrator:
             request={"parent": parent, "payload": {"data": secret_value.encode("UTF-8")}}
             )
         
-    def get_credentials(self, project_id, secret_id):
+    def get_credentials(self, project_id, secret_id, request=None):
         """
         Authenticate user using secrets from Secret Manager.
         Update token if expired.
@@ -37,11 +37,12 @@ class GoogleServiceIntegrator:
         creds_json = self.get_secret(project_id, secret_id)
         creds_data = json.loads(creds_json)
         creds = Credentials.from_authorized_user_info(creds_data)
+        request = request
         # creds_expiration_date = creds.expired
         # creds_refresh_token = creds.refresh_token
         
         if creds and creds.expired and creds.refresh_token:
-            creds.refresh(Request())
+            creds.refresh(request)
             self.update_secret(project_id, secret_id, creds.to_json())
             return creds
         return None
