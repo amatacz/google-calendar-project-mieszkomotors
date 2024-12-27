@@ -76,6 +76,9 @@ def refresh_secrets(request, context=None):
     SECRET_ID = os.getenv("SECRET_ID")
 
     GoogleServiceIntegratorObject = GoogleServiceIntegrator()
-    GoogleServiceIntegratorObject.get_credentials(project_id=PROJECT_ID,
-                                            secret_id=SECRET_ID) 
-    return "Secrets refreshed."
+    secrets = GoogleServiceIntegratorObject.get_credentials(project_id=PROJECT_ID,
+                                            secret_id=SECRET_ID)
+    
+    if not secrets:
+        return "Secrets were not refreshed successfully."
+    return "Secrets refreshed successfully."
