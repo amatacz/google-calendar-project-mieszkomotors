@@ -1,5 +1,6 @@
 import json
 from google.oauth2.credentials import Credentials
+from google.oauth2 import service_account
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 from google.cloud.secretmanager import SecretManagerServiceClient 
@@ -12,6 +13,7 @@ class GoogleServiceIntegrator:
         self.creds = None
         self.google_drive_service = None
         self.google_calendar_service = None
+        self.gmail_service = None
 
     def get_secret(self, project_id, secret_id, version_id="latest"):
         """
@@ -35,9 +37,18 @@ class GoogleServiceIntegrator:
         Authenticate user using secrets from Secret Manager.
         Update token if expired.
         """
+        # Define the scopes required
+        SCOPES = [
+            "https://www.googleapis.com/auth/drive.metadata.readonly",
+            "https://www.googleapis.com/auth/calendar",
+            "https://www.googleapis.com/auth/calendar.events"
+        ]
+        
+
         creds_json = self.get_secret(project_id, secret_id)
         creds_data = json.loads(creds_json)
-        creds = Credentials.from_authorized_user_info(creds_data)
+        creds = service_account.Credentials.from_service_account_file(creds_data, scopes = SCOPES)
+        # creds = Credentials.from_authorized_user_info(creds_data)
         # creds_expiration_date = creds.expired
         # creds_refresh_token = creds.refresh_token
         
@@ -57,13 +68,6 @@ class GoogleServiceIntegrator:
             # Access the secret from Secret Manager
             credentials = self.get_credentials(PROJECT_ID, SECRET_ID)
 
-            # Define the scopes required
-            SCOPES = [
-                "https://www.googleapis.com/auth/drive.metadata.readonly",
-                "https://www.googleapis.com/auth/calendar",
-                "https://www.googleapis.com/auth/calendar.events"
-            ]
-
             # Build the Google Drive service
             self.google_drive_service = build("drive", "v3", credentials=credentials)
             print("Google Drive Service created.")
@@ -72,11 +76,14 @@ class GoogleServiceIntegrator:
             self.google_calendar_service = build("calendar", "v3", credentials=credentials)
             print("Google Calendar Service created.")
 
+            # Build the Gmail service
+            self.gmail_service = build("gmail", "v1", credentials=credentials)
+
         except Exception as e:
             print(f"Error occurred while creating Google services: {e}")
             raise e
         
-        return self.google_drive_service, self.google_calendar_service
+        return self.google_drive_service, self.google_calendar_service, self.gmail_service
 
     # def get_source_file_url(self,
     #                         file_name: str = "MieszkoMotors_praca.xlsx",
@@ -154,14 +161,17 @@ class GoogleServiceIntegrator:
                 'colorId': '3'
                 }
                 new_calendar_event = self.google_calendar_service.events().insert(calendarId='primary', body=event_dict_follow_up).execute()
-                print(f'Event created: {new_calendar_event.get('summary')}')
+                print(f'Event created: {new_calendar_event.get("summary")}')
             except Exception as e:
-                print(f"Creating event for {event["Imię"]} {event["Nazwisko"]} - {event["Marka"]} {event["Model"]} did not succeed.")
+                print(f'Creating event for {event["Imię"]} {event["Nazwisko"]} - {event["Marka"]} {event["Model"]} did not succeed.')
 
 
     def validate_if_event_already_exists_in_calendar(self, existing_events_list, event_to_be_created) -> bool:
-        # Get list of existing events summaries from existing events fetched from calendar (cutting off 2 last chars to avoid issue with follow up number -> follow ups are created in batches, all at once)
+
+        # Get list of existing events summaries from existing events fetched from calendar
+        # (cutting off 2 last chars to avoid issue with follow up number -> follow ups are created in batches, all at once)
         existing_events_list_summaries = [existing_event["summary"][:-2] for existing_event in existing_events_list]
+
         # Create summary string for event that we want to validate
         event_to_be_created_summary = f'{event_to_be_created["Imię"]} {event_to_be_created["Nazwisko"]} - FOLLOW UP'
 
@@ -170,8 +180,8 @@ class GoogleServiceIntegrator:
             print(f"Event {event_to_be_created_summary} already exits!")
             return False
         else:
-                print(f"This event does not exists. Creating event for {event_to_be_created["Imię"]} {event_to_be_created["Nazwisko"]}")
-                return True
+            print(f"""This event does not exists. Creating event for {event_to_be_created["Imię"]} {event_to_be_created["Nazwisko"]}""")
+            return True
         
     def remove_events_from_calendar(self, query = None, start_date = None, end_date = None):
 
