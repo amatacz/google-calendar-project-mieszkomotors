@@ -32,7 +32,7 @@ class DataTransformer:
         # Choose only useful columns from df
         df_useful_columns_extracted = df[["Data_rozpoczęcia",  "Data_zakończenia",  "Imię",
             "Nazwisko",  "Miasto",  "Nr_telefonu",  "Adres_e-mail",  "Marka",  "Model",
-            "Follow_up_1",  "Follow_up_2",  "Follow_up_3", "Przegląd techniczny", "Ubezpieczenie samochodu"]]
+            "Follow_up_1",  "Follow_up_2",  "Follow_up_3", "Przegląd techniczny", "Ubezpieczenie samochodu", "Rejestracja auta"]]
         # Sort df on column that will be use in condition
         df_useful_columns_extracted.sort_values("Follow_up_1")
         # Format phone number to be clickable on mobile calendar
@@ -51,45 +51,6 @@ class DataTransformer:
             return events_dict
         except Exception as e:
             print(f"Error occured while catching new {type_of_event} events: {e}")
-
-
-    
-    # def get_dict_of_follow_up_events_from_timeframe(self, df, event_start_day, event_end_day):
-    #         # Get new events
-    #         try:
-    #             events = df[(df["Follow_up_1"] >= event_start_day) & (df["Follow_up_1"] <= event_end_day)]
-    #             events.reset_index(drop=True, inplace=True)
-                    
-    #             # Save events as dictionary
-    #             events_dict = events.to_dict(orient="index")
-    #             return events_dict
-    #         except Exception as e:
-    #             print(f"Error occured while catching new follow up events: {e}")
-
-    # def get_dict_of_insurance_events_from_timeframe(self, df, event_start_day, event_end_day):
-    #     # Get new events
-    #     try:
-    #         insurance_events = df[(df["Ubezpieczenie samochodu"] >= event_start_day) & (df["Ubezpieczenie samochodu"] <= event_end_day)]
-    #         insurance_events.reset_index(drop=True, inplace=True)
-
-    #         # Save insurance events as dictionary
-    #         insurance_events_dict = insurance_events.to_dict(orient="index")
-    #         return insurance_events_dict
-    #     except Exception as e:
-    #         print(f"Error occured while catching new insurance events: {e}")
-
-    # def get_dict_of_car_inspection_events_from_timeframe(self, df, event_start_day, event_end_day):
-    #     # Get new events
-    #     try:
-    #         insurance_events = df[(df["Przegląd techniczny"] >= event_start_day) & (df["Przegląd techniczny"] <= event_end_day)]
-    #         insurance_events.reset_index(drop=True, inplace=True)
-
-    #         # Save insurance events as dictionary
-    #         insurance_events_dict = insurance_events.to_dict(orient="index")
-    #         return insurance_events_dict
-    #     except Exception as e:
-    #         print(f"Error occured while catching new car inspection events: {e}")
-
 
 
 
