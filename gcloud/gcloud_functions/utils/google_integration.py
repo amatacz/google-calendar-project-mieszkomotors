@@ -336,7 +336,7 @@ class GoogleServiceIntegrator:
         print("Events removed from calendar")
 
 
-    def get_events_list(self, type_of_event, start_date=None, end_date=None):
+    def get_events_list(self, start_date=None, end_date=None, type_of_event=None):
         # Getting current datetime, but in UTC in isoformat:
         # formatting and cutting off last 3 digits to get rid of microseconds) and append 'Z'
         start_date_formatted = start_date.strftime('%Y-%m-%dT%H:%M:%S.%f')[:-3] + 'Z'
