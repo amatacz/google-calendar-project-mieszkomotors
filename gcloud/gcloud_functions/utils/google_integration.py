@@ -88,21 +88,21 @@ class GoogleServiceIntegrator:
         
         return self.google_drive_service, self.google_calendar_service, self.gmail_service
 
-    # def get_source_file_url(self,
-    #                         file_name: str = "MieszkoMotors_praca.xlsx",
-    #                         format: str = "xlsx"):
-    #     # Call the Drive v3 API
-    #     results = (
-    #         self.google_drive_service.files().list(pageSize=10, fields="nextPageToken, files(id, name)").execute()
-    #     )
-    #     items = results.get("files", [])
+    def get_source_file_url(self,
+                            file_name: str = "MieszkoMotors_praca.xlsx",
+                            format: str = "xlsx"):
+        # Call the Drive v3 API
+        results = (
+            self.google_drive_service.files().list(pageSize=10, fields="nextPageToken, files(id, name)").execute()
+        )
+        items = results.get("files", [])
 
-    #     if not items:
-    #         print("No source files found.")
-    #         return None
-    #     for item in items:
-    #         if item['name'] == file_name:
-    #             return f"https://docs.google.com/spreadsheets/d/{item["id"]}/export?format={format}"
+        if not items:
+            print("No source files found.")
+            return None
+        for item in items:
+            if item['name'] == file_name:
+                return f"https://docs.google.com/spreadsheets/d/{item["id"]}/export?format={format}"
 
 
     # FOLLOW UP EVENTS SECTION
@@ -334,3 +334,64 @@ class GoogleServiceIntegrator:
             self.google_calendar_service.events().delete(calendarId=self.target_calendar_id, eventId=event['id']).execute()
         
         print("Events removed from calendar")
+
+
+    def get_events_list(self, type_of_event, start_date=None, end_date=None):
+        # Getting current datetime, but in UTC in isoformat:
+        # formatting and cutting off last 3 digits to get rid of microseconds) and append 'Z'
+        start_date_formatted = start_date.strftime('%Y-%m-%dT%H:%M:%S.%f')[:-3] + 'Z'
+        end_date_formatted = end_date.strftime('%Y-%m-%dT%H:%M:%S.%f')[:-3] + 'Z'
+
+        events_result = (
+            self.google_calendar_service.events().list(
+                calendarId=self.target_calendar_id,
+                q=type_of_event,
+                timeMin=start_date_formatted,
+                timeMax=end_date_formatted,
+                singleEvents=True,
+                orderBy="startTime",
+            ).execute()
+        )
+        events = events_result.get("items", [])
+
+        try: 
+            if events:
+                return events
+            else:
+                print(f"No {type_of_event} events found.")
+                return []
+        except HttpError as e:
+            print(f"An error occurred: {e}")
+
+    def create_event(self, event: dict, type_of_event: str):
+        """
+        Create event reminder for event from this month fetched by get_events_from_timeframe()
+        """
+        try:
+            description_html_string = f'Skontaktuj się z<br><b>{event["Imię"]} {event["Nazwisko"]}</b>, właścicielem auta <i>{event["Model"]} {event["Marka"]}</i>. f{type_of_event} kończy się dnia {event[type_of_event]}<hr>Dane kontaktowe:<ul><li>Nr telefonu: <a href="tel:{event["Nr_telefonu"]}">{event["Nr_telefonu"]}</a></li><li>E-mail: {event["Adres_e-mail"]}</li></ul><hr>'
+            event_dict_follow_up = {
+                    'summary': f'{event["Imię"]} {event["Nazwisko"]} - {type_of_event} - {event["Marka"]} {event["Model"]}',
+                    'description': description_html_string,
+                    'start': {
+                        'dateTime': event[type_of_event].strftime('%Y-%m-%dT%H:%M:%S.%f')[:-3] + 'Z',
+                        'timeZone': 'Europe/Warsaw',
+                    },
+                    'end': {
+                        'dateTime': event[type_of_event].strftime('%Y-%m-%dT%H:%M:%S.%f')[:-3] + 'Z',
+                        'timeZone': 'Europe/Warsaw',
+                    },
+                    'reminders': {
+                        'useDefault': False,
+                        'overrides': [
+                        {'method': 'email', 'minutes': 24 * 60},
+                        {'method': 'popup', 'minutes': 8 * 60},
+                        ],
+                    },
+                    'transparency': 'transparent',
+                    'visibility': 'private',
+                    'colorId': '3'
+                    }
+            new_calendar_event = self.google_calendar_service.events().insert(calendarId=self.target_calendar_id, body=event_dict_follow_up).execute()
+            print(f'Event created: {new_calendar_event.get("summary")}')
+        except Exception as e:
+            print(f'Creating event for {event["Imię"]} {event["Nazwisko"]} - {type_of_event} - {event["Marka"]} {event["Model"]} did not succeed.')
