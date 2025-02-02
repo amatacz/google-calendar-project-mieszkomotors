@@ -22,7 +22,7 @@ class GoogleServiceIntegrator:
         name = f"projects/{project_id}/secrets/{secret_id}/versions/{version_id}"
         response = SecretManagerServiceClient().access_secret_version(name=name)
         #return response.payload.data.decode('UTF-8')
-        return response.payload.data
+        return response
     
     def update_secret(self, project_id, secret_id, secret_value):
         """
