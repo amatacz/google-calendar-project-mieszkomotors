@@ -47,6 +47,7 @@ class GoogleServiceIntegrator:
 
         creds_json = self.get_secret(project_id, secret_id)
         creds_data = json.loads(creds_json)
+
         creds = service_account.Credentials.from_service_account_file(creds_data, scopes = SCOPES)
         # creds = Credentials.from_authorized_user_info(creds_data)
         # creds_expiration_date = creds.expired
@@ -131,9 +132,39 @@ class GoogleServiceIntegrator:
         except HttpError as e:
             print(f"An error occurred: {e}")
 
+    def get_insurance_events_list(self, start_date=None, end_date=None):
+        # Call the Calendar API
+
+        # Getting current datetime, but in UTC in isoformat:
+        # formatting and cutting off last 3 digits to get rid of microseconds) and append 'Z'
+        start_date_formatted = start_date.strftime('%Y-%m-%dT%H:%M:%S.%f')[:-3] + 'Z'
+        end_date_formatted = end_date.strftime('%Y-%m-%dT%H:%M:%S.%f')[:-3] + 'Z'
+
+        events_result = (
+            self.google_calendar_service.events().list(
+                calendarId="primary",
+                q="Ubezpieczenie",
+                timeMin=start_date_formatted,
+                timeMax=end_date_formatted,
+                singleEvents=True,
+                orderBy="startTime",
+            ).execute()
+        )
+        events = events_result.get("items", [])
+
+        try: 
+            if events:
+                return events
+            else:
+                print("No insurance events found.")
+                return []
+        except HttpError as e:
+            print(f"An error occurred: {e}")
+
+
     def create_follow_up_events(self, event: dict):
         '''
-        Create all 4 follow up events for events from this month fetched by get_dict_of_events_from_timeframe()
+        Create all 4 follow up events for events from this month fetched by get_dict_of_follow_up_events_from_timeframe()
         '''
         for follow_up_number in range(1, 5):
             try:
@@ -165,6 +196,39 @@ class GoogleServiceIntegrator:
             except Exception as e:
                 print(f'Creating event for {event["Imię"]} {event["Nazwisko"]} - {event["Marka"]} {event["Model"]} did not succeed.')
 
+    def create_insurance_event(self, event: dict):
+        """
+        Create insurance reminder for event from this month fetched by get_dict_of_insurance_events_from_timeframe()
+        """
+        try:
+            description_html_string = f'Skontaktuj się z<br><b>{event["Imię"]} {event["Nazwisko"]}</b>, właścicielem auta <i>{event["Model"]} {event["Marka"]}</i>. Ubezpieczenie kończy się dnia {event["Ubezpieczenie samochodu"]}<hr>Dane kontaktowe:<ul><li>Nr telefonu: <a href="tel:{event["Nr_telefonu"]}">{event["Nr_telefonu"]}</a></li><li>E-mail: {event["Adres_e-mail"]}</li></ul><hr>'
+            event_dict_follow_up = {
+                    'summary': f'{event["Imię"]} {event["Nazwisko"]} - Ubezpieczenie {event["Ubezpieczenie samochodu"]}',
+                    'description': description_html_string,
+                    'start': {
+                        'dateTime': event["Ubezpieczenie samochodu"].strftime('%Y-%m-%dT%H:%M:%S.%f')[:-3] + 'Z',
+                        'timeZone': 'Europe/Warsaw',
+                    },
+                    'end': {
+                        'dateTime': event["Ubezpieczenie samochodu"].strftime('%Y-%m-%dT%H:%M:%S.%f')[:-3] + 'Z',
+                        'timeZone': 'Europe/Warsaw',
+                    },
+                    'reminders': {
+                        'useDefault': False,
+                        'overrides': [
+                        {'method': 'email', 'minutes': 24 * 60},
+                        {'method': 'popup', 'minutes': 8 * 60},
+                        ],
+                    },
+                    'transparency': 'transparent',
+                    'visibility': 'private',
+                    'colorId': '3'
+                    }
+            new_calendar_event = self.google_calendar_service.events().insert(calendarId='primary', body=event_dict_follow_up).execute()
+            print(f'Event created: {new_calendar_event.get("summary")}')
+        except Exception as e:
+            print(f'Creating event for {event["Imię"]} {event["Nazwisko"]} - {event["Marka"]} {event["Model"]} did not succeed.')
+        
 
     def validate_if_event_already_exists_in_calendar(self, existing_events_list, event_to_be_created) -> bool:
 

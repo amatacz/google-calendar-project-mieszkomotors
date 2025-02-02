@@ -36,11 +36,11 @@ steps:
       - workflow-google-calendar-events
       - --source=workflows/workflow-google-calendar-events.yaml
       - --location=europe-west1
-  - name: "gcr.io/google.com/cloudsdktool/cloud-sdk"
-    entrypoint: 'gcloud'
-    args:
-      - workflows
-      - deploy
-      - workflow-refresh-secrets
-      - --source=workflows/workflow-refresh-secrets.yaml
-      - --location=europe-west1
+  # - name: "gcr.io/google.com/cloudsdktool/cloud-sdk"
+  #   entrypoint: 'gcloud'
+  #   args:
+  #     - workflows
+  #     - deploy
+  #     - workflow-refresh-secrets
+  #     - --source=workflows/workflow-refresh-secrets.yaml
+  #     - --location=europe-west1
