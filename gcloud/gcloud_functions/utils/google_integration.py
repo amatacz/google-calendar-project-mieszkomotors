@@ -48,7 +48,7 @@ class GoogleServiceIntegrator:
         creds_json = self.get_secret(project_id, secret_id)
         creds_data = json.loads(creds_json)
 
-        creds = service_account.Credentials.from_service_account_file(creds_data, scopes = SCOPES)
+        creds = service_account.Credentials.from_service_account_info(creds_data, scopes = SCOPES)
         # creds = Credentials.from_authorized_user_info(creds_data)
         # creds_expiration_date = creds.expired
         # creds_refresh_token = creds.refresh_token
@@ -143,7 +143,7 @@ class GoogleServiceIntegrator:
         events_result = (
             self.google_calendar_service.events().list(
                 calendarId="primary",
-                q="Ubezpieczenie",
+                q="Ubezpieczenie samochodu",
                 timeMin=start_date_formatted,
                 timeMax=end_date_formatted,
                 singleEvents=True,

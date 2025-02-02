@@ -56,7 +56,7 @@ class DataTransformer:
     def get_dict_of_insurance_events_from_timeframe(self, df, event_start_day, event_end_day):
         # Get new events
         try:
-            insurance_events = df[(df["Ubezpieczenie samochodu"] >= event_start_day) & (df["Ubezpieczenie_samochodu"] <= event_end_day)]
+            insurance_events = df[(df["Ubezpieczenie samochodu"] >= event_start_day) & (df["Ubezpieczenie samochodu"] <= event_end_day)]
             insurance_events.reset_index(drop=True, inplace=True)
 
             # Save insurance events as dictionary
