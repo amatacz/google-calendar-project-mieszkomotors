@@ -47,7 +47,7 @@ class GoogleServiceIntegrator:
         
 
         creds_json = self.get_secret(project_id, secret_id)
-        creds_data = json.loads(creds_json)
+        #creds_data = json.loads(creds_json)
 
         creds = service_account.Credentials.from_service_account_file(creds_json, scopes = SCOPES)
         # creds = Credentials.from_authorized_user_info(creds_data)
