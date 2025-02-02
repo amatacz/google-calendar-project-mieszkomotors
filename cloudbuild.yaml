@@ -26,7 +26,7 @@ steps:
       - --trigger-http
       - --runtime=python312
       - --memory=1GB  
-      - --set-env-vars=PROJECT_ID=481715545022,SECRET_ID=oauth-token-google-calendar-project
+      - --set-env-vars=PROJECT_ID=481715545022,SECRET_ID=google-calendar-key
   # Step to deploy the Cloud Workflows
   - name: "gcr.io/google.com/cloudsdktool/cloud-sdk"
     entrypoint: 'gcloud'

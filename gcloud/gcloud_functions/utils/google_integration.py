@@ -105,9 +105,8 @@ class GoogleServiceIntegrator:
     #             return f"https://docs.google.com/spreadsheets/d/{item["id"]}/export?format={format}"
 
 
+    # FOLLOW UP EVENTS SECTION
     def get_follow_up_events_list(self, start_date = None, end_date = None):
-        # Call the Calendar API
-
         # Getting current datetime, but in UTC in isoformat:
         # formatting and cutting off last 3 digits to get rid of microseconds) and append 'Z'
         start_date_formatted = start_date.strftime('%Y-%m-%dT%H:%M:%S.%f')[:-3] + 'Z'
@@ -134,41 +133,12 @@ class GoogleServiceIntegrator:
         except HttpError as e:
             print(f"An error occurred: {e}")
 
-    def get_insurance_events_list(self, start_date=None, end_date=None):
-
-        # Getting current datetime, but in UTC in isoformat:
-        # formatting and cutting off last 3 digits to get rid of microseconds) and append 'Z'
-        start_date_formatted = start_date.strftime('%Y-%m-%dT%H:%M:%S.%f')[:-3] + 'Z'
-        end_date_formatted = end_date.strftime('%Y-%m-%dT%H:%M:%S.%f')[:-3] + 'Z'
-
-        events_result = (
-            self.google_calendar_service.events().list(
-                calendarId=self.target_calendar_id,
-                q="Ubezpieczenie samochodu",
-                timeMin=start_date_formatted,
-                timeMax=end_date_formatted,
-                singleEvents=True,
-                orderBy="startTime",
-            ).execute()
-        )
-        events = events_result.get("items", [])
-
-        try: 
-            if events:
-                return events
-            else:
-                print("No insurance events found.")
-                return []
-        except HttpError as e:
-            print(f"An error occurred: {e}")
-
-
     def create_follow_up_events(self, event: dict):
         '''
-        Create all 4 follow up events for events from this month fetched by get_dict_of_follow_up_events_from_timeframe()
+        Create all 3 follow up events for events from this month fetched by get_dict_of_follow_up_events_from_timeframe()
         '''
 
-        for follow_up_number in range(1, 5):
+        for follow_up_number in range(1, 4):
             try:
                 description_html_string = f'Skontaktuj się z<br><b>{event["Imię"]} {event["Nazwisko"]}</b>, właścicielem auta <i>{event["Model"]} {event["Marka"]}</i>.<hr>Dane kontaktowe:<ul><li>Nr telefonu: <a href="tel:{event["Nr_telefonu"]}">{event["Nr_telefonu"]}</a></li><li>E-mail: {event["Adres_e-mail"]}</li></ul><hr>'
                 event_dict_follow_up = {
@@ -198,6 +168,34 @@ class GoogleServiceIntegrator:
             except Exception as e:
                 print(f'Creating event for {event["Imię"]} {event["Nazwisko"]} - {event["Marka"]} {event["Model"]} did not succeed.')
 
+    # INSURANCE EVENTS SECTION
+    def get_insurance_events_list(self, start_date=None, end_date=None):
+        # Getting current datetime, but in UTC in isoformat:
+        # formatting and cutting off last 3 digits to get rid of microseconds) and append 'Z'
+        start_date_formatted = start_date.strftime('%Y-%m-%dT%H:%M:%S.%f')[:-3] + 'Z'
+        end_date_formatted = end_date.strftime('%Y-%m-%dT%H:%M:%S.%f')[:-3] + 'Z'
+
+        events_result = (
+            self.google_calendar_service.events().list(
+                calendarId=self.target_calendar_id,
+                q="Ubezpieczenie samochodu",
+                timeMin=start_date_formatted,
+                timeMax=end_date_formatted,
+                singleEvents=True,
+                orderBy="startTime",
+            ).execute()
+        )
+        events = events_result.get("items", [])
+
+        try: 
+            if events:
+                return events
+            else:
+                print("No insurance events found.")
+                return []
+        except HttpError as e:
+            print(f"An error occurred: {e}")
+
     def create_insurance_event(self, event: dict):
         """
         Create insurance reminder for event from this month fetched by get_dict_of_insurance_events_from_timeframe()
@@ -205,7 +203,7 @@ class GoogleServiceIntegrator:
         try:
             description_html_string = f'Skontaktuj się z<br><b>{event["Imię"]} {event["Nazwisko"]}</b>, właścicielem auta <i>{event["Model"]} {event["Marka"]}</i>. Ubezpieczenie kończy się dnia {event["Ubezpieczenie samochodu"]}<hr>Dane kontaktowe:<ul><li>Nr telefonu: <a href="tel:{event["Nr_telefonu"]}">{event["Nr_telefonu"]}</a></li><li>E-mail: {event["Adres_e-mail"]}</li></ul><hr>'
             event_dict_follow_up = {
-                    'summary': f'{event["Imię"]} {event["Nazwisko"]} - Ubezpieczenie {event["Ubezpieczenie samochodu"]}',
+                    'summary': f'{event["Imię"]} {event["Nazwisko"]} - Ubezpieczenie - {event["Marka"]} {event["Model"]}',
                     'description': description_html_string,
                     'start': {
                         'dateTime': event["Ubezpieczenie samochodu"].strftime('%Y-%m-%dT%H:%M:%S.%f')[:-3] + 'Z',
@@ -232,14 +230,79 @@ class GoogleServiceIntegrator:
             print(f'Creating event for {event["Imię"]} {event["Nazwisko"]} - {event["Marka"]} {event["Model"]} did not succeed.')
         
 
-    def validate_if_event_already_exists_in_calendar(self, existing_events_list, event_to_be_created) -> bool:
+    # CAR INSPECTION SECTION
+
+    def get_car_inspection_events_list(self, start_date=None, end_date=None):
+        # Getting current datetime, but in UTC in isoformat:
+        # formatting and cutting off last 3 digits to get rid of microseconds) and append 'Z'
+        start_date_formatted = start_date.strftime('%Y-%m-%dT%H:%M:%S.%f')[:-3] + 'Z'
+        end_date_formatted = end_date.strftime('%Y-%m-%dT%H:%M:%S.%f')[:-3] + 'Z'
+
+        events_result = (
+            self.google_calendar_service.events().list(
+                calendarId=self.target_calendar_id,
+                q="Przegląd techniczny",
+                timeMin=start_date_formatted,
+                timeMax=end_date_formatted,
+                singleEvents=True,
+                orderBy="startTime",
+            ).execute()
+        )
+        events = events_result.get("items", [])
+
+        try: 
+            if events:
+                return events
+            else:
+                print("No car inspection events found.")
+                return []
+        except HttpError as e:
+            print(f"An error occurred: {e}")
+
+    def create_car_inspection_event(self, event: dict):
+        """
+        Create car inspection reminder for event from this month fetched by get_dict_of_car_inspection_events_from_timeframe()
+        """
+        try:
+            description_html_string = f'Skontaktuj się z<br><b>{event["Imię"]} {event["Nazwisko"]}</b>, właścicielem auta <i>{event["Model"]} {event["Marka"]}</i>. Przegląd techniczny auta kończy się dnia {event["Przegląd techniczny"]}<hr>Dane kontaktowe:<ul><li>Nr telefonu: <a href="tel:{event["Nr_telefonu"]}">{event["Nr_telefonu"]}</a></li><li>E-mail: {event["Adres_e-mail"]}</li></ul><hr>'
+            event_dict_follow_up = {
+                    'summary': f'{event["Imię"]} {event["Nazwisko"]} - Przegląd techniczny - {event["Marka"]} {event["Model"]}',
+                    'description': description_html_string,
+                    'start': {
+                        'dateTime': event["Przegląd techniczny"].strftime('%Y-%m-%dT%H:%M:%S.%f')[:-3] + 'Z',
+                        'timeZone': 'Europe/Warsaw',
+                    },
+                    'end': {
+                        'dateTime': event["Przegląd techniczny"].strftime('%Y-%m-%dT%H:%M:%S.%f')[:-3] + 'Z',
+                        'timeZone': 'Europe/Warsaw',
+                    },
+                    'reminders': {
+                        'useDefault': False,
+                        'overrides': [
+                        {'method': 'email', 'minutes': 24 * 60},
+                        {'method': 'popup', 'minutes': 8 * 60},
+                        ],
+                    },
+                    'transparency': 'transparent',
+                    'visibility': 'private',
+                    'colorId': '3'
+                    }
+            new_calendar_event = self.google_calendar_service.events().insert(calendarId=self.target_calendar_id, body=event_dict_follow_up).execute()
+            print(f'Event created: {new_calendar_event.get("summary")}')
+        except Exception as e:
+            print(f'Creating event for {event["Imię"]} {event["Nazwisko"]} - {event["Marka"]} {event["Model"]} did not succeed.')
+
+
+
+
+    def validate_if_event_already_exists_in_calendar(self, existing_events_list, event_to_be_created, type_of_event) -> bool:
 
         # Get list of existing events summaries from existing events fetched from calendar
         # (cutting off 2 last chars to avoid issue with follow up number -> follow ups are created in batches, all at once)
         existing_events_list_summaries = [existing_event["summary"][:-2] for existing_event in existing_events_list]
 
         # Create summary string for event that we want to validate
-        event_to_be_created_summary = f'{event_to_be_created["Imię"]} {event_to_be_created["Nazwisko"]} - FOLLOW UP'
+        event_to_be_created_summary = f'{event_to_be_created["Imię"]} {event_to_be_created["Nazwisko"]} - {type_of_event}'
 
         # Validate if event that we want to create already exists
         if event_to_be_created_summary in existing_events_list_summaries:
@@ -248,9 +311,9 @@ class GoogleServiceIntegrator:
         else:
             print(f"""This event does not exists. Creating event for {event_to_be_created["Imię"]} {event_to_be_created["Nazwisko"]}""")
             return True
-        
-    def remove_events_from_calendar(self, query = None, start_date = None, end_date = None):
 
+
+    def remove_events_from_calendar(self, query = None, start_date = None, end_date = None):
         # Getting current datetime, but in UTC in isoformat:
         # formatting and cutting off last 3 digits to get rid of microseconds) and append 'Z'
         start_date_formatted = start_date.strftime('%Y-%m-%dT%H:%M:%S.%f')[:-3] + 'Z'

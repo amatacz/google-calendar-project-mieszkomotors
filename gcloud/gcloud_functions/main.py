@@ -29,6 +29,7 @@ def create_new_events(request, context=None):
     source_file_transformed = DataTransformerObject.transform_file(source_file)
     follow_up_events_to_be_created = DataTransformerObject.get_dict_of_follow_up_events_from_timeframe(source_file_transformed, START, END)
     insurance_events_to_be_created = DataTransformerObject.get_dict_of_insurance_events_from_timeframe(source_file_transformed, START, END)
+    car_inspection_events_to_be_created = DataTransformerObject.get_dict_of_car_inspection_events_from_timeframe(source_file_transformed, START, END)
         
     if not follow_up_events_to_be_created:
         return "No upcoming follow up events - cannot proceed with events creation. Skipping to Insurance Events checking..."
@@ -45,14 +46,14 @@ def create_new_events(request, context=None):
                 print(f"Error while creating events {e}")
         else:
             for event_to_be_created in follow_up_events_to_be_created.values():
-                if GoogleServiceIntegratorObject.validate_if_event_already_exists_in_calendar(existing_next_month_follow_up_events, event_to_be_created):
+                if GoogleServiceIntegratorObject.validate_if_event_already_exists_in_calendar(existing_next_month_follow_up_events, event_to_be_created, "FOLLOW UP"):
 
                     # Create events in Google Calendar if event is not present in calendar
                     GoogleServiceIntegratorObject.create_follow_up_events(event_to_be_created)
             print("Process of creating follow up events finished successfully.")
 
     if not insurance_events_to_be_created:
-        return "No upcoming insurance events - cannot proceed with events creation. Exiting..."
+        return "No upcoming insurance events - cannot proceed with events creation. Skipping to Car Inspection Events checking..."
     else:
         # Get insurance events from given timeframe
         existing_next_month_insurance_events = GoogleServiceIntegratorObject.get_insurance_events_list(START, END)
@@ -66,11 +67,33 @@ def create_new_events(request, context=None):
                 print(f"Error while creating insurance event: {e}")
         else:
             for insurance_event_to_be_created in insurance_events_to_be_created.values():
-                if GoogleServiceIntegratorObject.validate_if_event_already_exists_in_calendar(existing_next_month_insurance_events, insurance_event_to_be_created):
+                if GoogleServiceIntegratorObject.validate_if_event_already_exists_in_calendar(existing_next_month_insurance_events, insurance_event_to_be_created, "Ubezpieczenie samochodu"):
 
                     # Create insurance event in Google Calendar if event is not present in calendar
                     GoogleServiceIntegratorObject.create_insurance_event(insurance_event_to_be_created)
-            print("Process of creating insurance evnets finished successfully.")
+            print("Process of creating insurance events finished successfully.")
+
+
+    if not car_inspection_events_to_be_created:
+        return "No upcoming car inspection events - cannot proceed with events creation. Exiting..."
+    else:
+        # Get insurance events from given timeframe
+        existing_next_month_car_inspection_events = GoogleServiceIntegratorObject.get_car_inspection_events_list(START, END)
+
+        if not car_inspection_events_to_be_created:
+            print("No existing car inspection events for following month. Proceed with car inspection events creation.")
+            try:
+                for car_inspection_event_to_be_created in car_inspection_events_to_be_created.values():
+                    GoogleServiceIntegratorObject.create_car_inspection_event(car_inspection_event_to_be_created)
+            except Exception as e:
+                print(f"Error while creating insurance event: {e}")
+        else:
+            for car_inspection_event_to_be_created in car_inspection_events_to_be_created.values():
+                if GoogleServiceIntegratorObject.validate_if_event_already_exists_in_calendar(existing_next_month_insurance_events, insurance_event_to_be_created, "Przegląd techniczny"):
+
+                    # Create insurance event in Google Calendar if event is not present in calendar
+                    GoogleServiceIntegratorObject.create_car_inspection_event(car_inspection_event_to_be_created)
+            print("Process of creating car inspection events finished successfully.")
 
     return "Events creation function finished"
 
@@ -107,6 +130,24 @@ def clean_insurance_events():
     # Create google services
     GoogleServiceIntegratorObject.get_google_services()
     GoogleServiceIntegratorObject.remove_events_from_calendar("Ubezpieczenie samochodu", START, END)
+
+    return "Done"
+
+def clean_car_inspection_events():
+    """
+    Function to remove Insurance events from Google Calendar.
+    By default removes events that start in month from today - dateframe can be specified.
+    Not deployed in GCF - to be used intentionally!
+    """                   
+    GoogleServiceIntegratorObject = GoogleServiceIntegrator()
+
+    # Utils object
+    DataConfiguratorObject = UtilsConfigurator()
+    START, END = DataConfiguratorObject.timeframe_window()
+
+    # Create google services
+    GoogleServiceIntegratorObject.get_google_services()
+    GoogleServiceIntegratorObject.remove_events_from_calendar("Przegląd techniczny", START, END)
 
     return "Done"
 

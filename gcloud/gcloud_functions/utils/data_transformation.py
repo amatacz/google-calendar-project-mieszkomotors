@@ -65,3 +65,15 @@ class DataTransformer:
         except Exception as e:
             print(f"Error occured while catching new insurance events: {e}")
 
+    def get_dict_of_car_inspection_events_from_timeframe(self, df, event_start_day, event_end_day):
+        # Get new events
+        try:
+            insurance_events = df[(df["Przegląd techniczny"] >= event_start_day) & (df["Przegląd techniczny"] <= event_end_day)]
+            insurance_events.reset_index(drop=True, inplace=True)
+
+            # Save insurance events as dictionary
+            insurance_events_dict = insurance_events.to_dict(orient="index")
+            return insurance_events_dict
+        except Exception as e:
+            print(f"Error occured while catching new car inspection events: {e}")
+
