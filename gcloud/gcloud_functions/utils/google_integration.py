@@ -14,6 +14,7 @@ class GoogleServiceIntegrator:
         self.google_drive_service = None
         self.google_calendar_service = None
         self.gmail_service = None
+        self.target_calendar_id = os.getenv("TARGET_CALENDAR_ID")
 
     def get_secret(self, project_id, secret_id, version_id="latest"):
         """
@@ -114,7 +115,7 @@ class GoogleServiceIntegrator:
 
         events_result = (
             self.google_calendar_service.events().list(
-                calendarId="primary",
+                calendarId=self.target_calendar_id,
                 q="FOLLOW UP",
                 timeMin=start_date_formatted,
                 timeMax=end_date_formatted,
@@ -134,7 +135,6 @@ class GoogleServiceIntegrator:
             print(f"An error occurred: {e}")
 
     def get_insurance_events_list(self, start_date=None, end_date=None):
-        # Call the Calendar API
 
         # Getting current datetime, but in UTC in isoformat:
         # formatting and cutting off last 3 digits to get rid of microseconds) and append 'Z'
@@ -143,7 +143,7 @@ class GoogleServiceIntegrator:
 
         events_result = (
             self.google_calendar_service.events().list(
-                calendarId="primary",
+                calendarId=self.target_calendar_id,
                 q="Ubezpieczenie samochodu",
                 timeMin=start_date_formatted,
                 timeMax=end_date_formatted,
@@ -167,6 +167,7 @@ class GoogleServiceIntegrator:
         '''
         Create all 4 follow up events for events from this month fetched by get_dict_of_follow_up_events_from_timeframe()
         '''
+
         for follow_up_number in range(1, 5):
             try:
                 description_html_string = f'Skontaktuj się z<br><b>{event["Imię"]} {event["Nazwisko"]}</b>, właścicielem auta <i>{event["Model"]} {event["Marka"]}</i>.<hr>Dane kontaktowe:<ul><li>Nr telefonu: <a href="tel:{event["Nr_telefonu"]}">{event["Nr_telefonu"]}</a></li><li>E-mail: {event["Adres_e-mail"]}</li></ul><hr>'
@@ -192,7 +193,7 @@ class GoogleServiceIntegrator:
                 'visibility': 'private',
                 'colorId': '3'
                 }
-                new_calendar_event = self.google_calendar_service.events().insert(calendarId='primary', body=event_dict_follow_up).execute()
+                new_calendar_event = self.google_calendar_service.events().insert(calendarId=self.target_calendar_id, body=event_dict_follow_up).execute()
                 print(f'Event created: {new_calendar_event.get("summary")}')
             except Exception as e:
                 print(f'Creating event for {event["Imię"]} {event["Nazwisko"]} - {event["Marka"]} {event["Model"]} did not succeed.')
@@ -225,7 +226,7 @@ class GoogleServiceIntegrator:
                     'visibility': 'private',
                     'colorId': '3'
                     }
-            new_calendar_event = self.google_calendar_service.events().insert(calendarId='primary', body=event_dict_follow_up).execute()
+            new_calendar_event = self.google_calendar_service.events().insert(calendarId=self.target_calendar_id, body=event_dict_follow_up).execute()
             print(f'Event created: {new_calendar_event.get("summary")}')
         except Exception as e:
             print(f'Creating event for {event["Imię"]} {event["Nazwisko"]} - {event["Marka"]} {event["Model"]} did not succeed.')
@@ -257,7 +258,7 @@ class GoogleServiceIntegrator:
         # Get list of all follow up events from calendar (uncomment timeMax to remove events from specific period)
         events_result = (
             self.google_calendar_service.events().list(
-                calendarId="primary",
+                calendarId=self.target_calendar_id,
                 q=query,
                 timeMin=start_date_formatted,
                 # timeMax=end_date_formatted,
@@ -268,6 +269,6 @@ class GoogleServiceIntegrator:
         events = events_result.get("items", [])
 
         for event in events:
-            self.google_calendar_service.events().delete(calendarId='primary', eventId=event['id']).execute()
+            self.google_calendar_service.events().delete(calendarId=self.target_calendar_id, eventId=event['id']).execute()
         
         print("Events removed from calendar")
