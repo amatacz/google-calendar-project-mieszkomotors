@@ -137,7 +137,7 @@ class GoogleServiceIntegrator:
         Create event reminder for event from this month fetched by get_events_from_timeframe()
         """
         if type_of_event=="Rejestracja auta":
-            event[type_of_event] = datetime.strptime(event[type_of_event], '%Y-%m-%dT%H:%M:%S.%f') + timedelta(days=10)
+            event[type_of_event] = datetime.fromtimestamp(event[type_of_event]) + timedelta(days=10)
 
         try:
             description_html_string = f'Skontaktuj się z<br><b>{event["Imię"]} {event["Nazwisko"]}</b>, właścicielem auta <i>{event["Model"]} {event["Marka"]}</i>. W związku z {type_of_event} dnia {event[type_of_event]}<hr>Dane kontaktowe:<ul><li>Nr telefonu: <a href="tel:{event["Nr_telefonu"]}">{event["Nr_telefonu"]}</a></li><li>E-mail: {event["Adres_e-mail"]}</li></ul><hr>'
