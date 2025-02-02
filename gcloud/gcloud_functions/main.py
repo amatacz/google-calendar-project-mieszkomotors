@@ -27,9 +27,9 @@ def create_new_events(request, context=None):
     # Get file, transform it and get list of events to be created
     source_file = DataTransformerObject.load_source_file_from_gdrive(SOURCE_FILE_URL)
     source_file_transformed = DataTransformerObject.transform_file(source_file)
-    follow_up_events_to_be_created = DataTransformerObject.get_dict_of_follow_up_events_from_timeframe(source_file_transformed, START, END)
-    insurance_events_to_be_created = DataTransformerObject.get_dict_of_insurance_events_from_timeframe(source_file_transformed, START, END)
-    car_inspection_events_to_be_created = DataTransformerObject.get_dict_of_car_inspection_events_from_timeframe(source_file_transformed, START, END)
+    follow_up_events_to_be_created = DataTransformerObject.get_dict_of_events_from_timeframe(source_file_transformed, START, END, "Follow_up_1")
+    insurance_events_to_be_created = DataTransformerObject.get_dict_of_events_from_timeframe(source_file_transformed, START, END, "Ubezpieczenie samochodu")
+    car_inspection_events_to_be_created = DataTransformerObject.get_dict_of_events_from_timeframe(source_file_transformed, START, END, "Przegląd techniczny")
         
     if not follow_up_events_to_be_created:
         return "No upcoming follow up events - cannot proceed with events creation. Skipping to Insurance Events checking..."
@@ -89,7 +89,7 @@ def create_new_events(request, context=None):
                 print(f"Error while creating insurance event: {e}")
         else:
             for car_inspection_event_to_be_created in car_inspection_events_to_be_created.values():
-                if GoogleServiceIntegratorObject.validate_if_event_already_exists_in_calendar(existing_next_month_insurance_events, insurance_event_to_be_created, "Przegląd techniczny"):
+                if GoogleServiceIntegratorObject.validate_if_event_already_exists_in_calendar(existing_next_month_car_inspection_events, insurance_event_to_be_created, "Przegląd techniczny"):
 
                     # Create insurance event in Google Calendar if event is not present in calendar
                     GoogleServiceIntegratorObject.create_car_inspection_event(car_inspection_event_to_be_created)
@@ -97,25 +97,43 @@ def create_new_events(request, context=None):
 
     return "Events creation function finished"
 
-def clean_follow_up_events():
-    """
-    Function to remove Follow Up events from Google Calendar.
-    By default removes events that start in month from today - dateframe can be specified.
-    Not deployed in GCF - to be used intentionally!
-    """                   
-    GoogleServiceIntegratorObject = GoogleServiceIntegrator()
+# def clean_follow_up_events():
+#     """
+#     Function to remove Follow Up events from Google Calendar.
+#     By default removes events that start in month from today - dateframe can be specified.
+#     Not deployed in GCF - to be used intentionally!
+#     """                   
+#     GoogleServiceIntegratorObject = GoogleServiceIntegrator()
 
-    # Utils object
-    DataConfiguratorObject = UtilsConfigurator()
-    START, END = DataConfiguratorObject.timeframe_window()
+#     # Utils object
+#     DataConfiguratorObject = UtilsConfigurator()
+#     START, END = DataConfiguratorObject.timeframe_window()
 
-    # Create google services
-    GoogleServiceIntegratorObject.get_google_services()
-    GoogleServiceIntegratorObject.remove_events_from_calendar("FOLLOW UP", START, END)
+#     # Create google services
+#     GoogleServiceIntegratorObject.get_google_services()
+#     GoogleServiceIntegratorObject.remove_events_from_calendar("FOLLOW UP", START, END)
 
-    return "Done"
+#     return "Done"
 
-def clean_insurance_events():
+# def clean_insurance_events():
+#     """
+#     Function to remove Insurance events from Google Calendar.
+#     By default removes events that start in month from today - dateframe can be specified.
+#     Not deployed in GCF - to be used intentionally!
+#     """                   
+#     GoogleServiceIntegratorObject = GoogleServiceIntegrator()
+
+#     # Utils object
+#     DataConfiguratorObject = UtilsConfigurator()
+#     START, END = DataConfiguratorObject.timeframe_window()
+
+#     # Create google services
+#     GoogleServiceIntegratorObject.get_google_services()
+#     GoogleServiceIntegratorObject.remove_events_from_calendar("Ubezpieczenie samochodu", START, END)
+
+#    return "Done"
+
+def clean_events(type_of_event):
     """
     Function to remove Insurance events from Google Calendar.
     By default removes events that start in month from today - dateframe can be specified.
@@ -129,25 +147,7 @@ def clean_insurance_events():
 
     # Create google services
     GoogleServiceIntegratorObject.get_google_services()
-    GoogleServiceIntegratorObject.remove_events_from_calendar("Ubezpieczenie samochodu", START, END)
-
-    return "Done"
-
-def clean_car_inspection_events():
-    """
-    Function to remove Insurance events from Google Calendar.
-    By default removes events that start in month from today - dateframe can be specified.
-    Not deployed in GCF - to be used intentionally!
-    """                   
-    GoogleServiceIntegratorObject = GoogleServiceIntegrator()
-
-    # Utils object
-    DataConfiguratorObject = UtilsConfigurator()
-    START, END = DataConfiguratorObject.timeframe_window()
-
-    # Create google services
-    GoogleServiceIntegratorObject.get_google_services()
-    GoogleServiceIntegratorObject.remove_events_from_calendar("Przegląd techniczny", START, END)
+    GoogleServiceIntegratorObject.remove_events_from_calendar(type_of_event, START, END)
 
     return "Done"
 
@@ -163,3 +163,5 @@ def refresh_secrets(request, context=None):
     if not secrets:
         return "Secrets were not refreshed successfully."
     return "Secrets refreshed successfully."
+
+x = clean_events("Przegląd techniczny")
