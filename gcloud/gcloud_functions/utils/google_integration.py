@@ -139,9 +139,10 @@ class GoogleServiceIntegrator:
         if type_of_event=="Rejestracja auta":
             event[type_of_event] = event[type_of_event] + timedelta(days=10)
 
+
         try:
             description_html_string = f'Skontaktuj się z<br><b>{event["Imię"]} {event["Nazwisko"]}</b>, właścicielem auta <i>{event["Model"]} {event["Marka"]}</i>. W związku z {type_of_event} dnia {event[type_of_event]}<hr>Dane kontaktowe:<ul><li>Nr telefonu: <a href="tel:{event["Nr_telefonu"]}">{event["Nr_telefonu"]}</a></li><li>E-mail: {event["Adres_e-mail"]}</li></ul><hr>'
-            event_dict_follow_up = {
+            event_dict = {
                     'summary': f'{event["Imię"]} {event["Nazwisko"]} - {type_of_event} - {event["Marka"]} {event["Model"]}',
                     'description': description_html_string,
                     'start': {
@@ -163,7 +164,7 @@ class GoogleServiceIntegrator:
                     'visibility': 'private',
                     'colorId': '3'
                     }
-            new_calendar_event = self.google_calendar_service.events().insert(calendarId=self.target_calendar_id, body=event_dict_follow_up).execute()
+            new_calendar_event = self.google_calendar_service.events().insert(calendarId=self.target_calendar_id, body=event_dict).execute()
             print(f'Event created: {new_calendar_event.get("summary")}')
         except Exception as e:
             print(f'Creating event for {event["Imię"]} {event["Nazwisko"]} - {type_of_event} - {event["Marka"]} {event["Model"]} did not succeed: {e}')
