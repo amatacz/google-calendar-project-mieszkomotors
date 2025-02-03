@@ -36,7 +36,11 @@ class DataTransformer:
         # Sort df on column that will be use in condition
         df_useful_columns_extracted.sort_values("Follow_up_1")
         # Format phone number to be clickable on mobile calendar
-        df_useful_columns_extracted["Nr_telefonu"] = df_useful_columns_extracted["Nr_telefonu"].astype("str").apply(lambda x: x.replace(" ", "")) 
+        df_useful_columns_extracted["Nr_telefonu"] = df_useful_columns_extracted["Nr_telefonu"].astype("str").apply(lambda x: x.replace(" ", ""))
+        df_useful_columns_extracted[["Przegląd techniczny", "Ubezpieczenie samochodu", "Rejestracja auta"]] = df_useful_columns_extracted[["Przegląd techniczny", "Ubezpieczenie samochodu", "Rejestracja auta"]].apply(pd.to_datetime, errors='coerce')
+
+
+
 
         return df_useful_columns_extracted
     
