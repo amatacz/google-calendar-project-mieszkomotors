@@ -173,8 +173,7 @@ class GoogleServiceIntegrator:
     def validate_if_event_already_exists_in_calendar(self, existing_events_list, event_to_be_created, type_of_event) -> bool:
 
         # Get list of existing events summaries from existing events fetched from calendar
-        # (cutting off 2 last chars to avoid issue with follow up number -> follow ups are created in batches, all at once)
-        existing_events_list_summaries = [existing_event["summary"][:-2] for existing_event in existing_events_list]
+        existing_events_list_summaries = [existing_event["summary"] for existing_event in existing_events_list]
 
         # Create summary string for event that we want to validate
         event_to_be_created_summary = f'{event_to_be_created["Imię"]} {event_to_be_created["Nazwisko"]} - {type_of_event} - {event_to_be_created["Marka"]} {event_to_be_created["Model"]}'
