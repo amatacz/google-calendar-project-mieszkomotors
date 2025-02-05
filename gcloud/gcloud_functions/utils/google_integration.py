@@ -103,7 +103,7 @@ class GoogleServiceIntegrator:
             return None
         for item in items:
             if item['name'] == file_name:
-                return f"https://docs.google.com/spreadsheets/d/{item["id"]}/export?format={format}"
+                return f"https://docs.google.com/spreadsheets/d/{item['id']}/export?format={format}"
 
     def get_events_list(self, start_date=None, end_date=None, type_of_event=None):
         # Getting current datetime, but in UTC in isoformat:
@@ -209,5 +209,27 @@ class GoogleServiceIntegrator:
             self.google_calendar_service.events().delete(calendarId=self.target_calendar_id, eventId=event['id']).execute()
         
         print("Events removed from calendar")
+
+    def create_events_for_next_month(self, event_start_date, event_end_date, events_to_be_created, type_of_event):
+        if not events_to_be_created:
+            print("No upcoming follow up events - cannot proceed with events creation. Skipping to Insurance Events checking...")
+        else:
+            # Get follow up events from given timeframe
+            existing_next_month_events = self.get_events_list(event_start_date, event_end_date, type_of_event)
+
+            if not existing_next_month_events:
+                print("No existing events for following moth. Proceed with events creation.")
+                try:
+                    for event in events_to_be_created.values():
+                        self.create_event(event, type_of_event)
+                except Exception as e:
+                    print(f"Error while creating events {e}.")
+            else:
+                for event_to_be_created in events_to_be_created.values():
+                    if self.validate_if_event_already_exists_in_calendar(existing_next_month_events, event_to_be_created, type_of_event):
+
+                        # Create events in Google Calendar if event is not present in calendar
+                        self.create_event(event_to_be_created, type_of_event)
+                print("Process of creating follow up events finished successfully.")
 
 

@@ -33,14 +33,16 @@ class DataTransformer:
         df_useful_columns_extracted = df[["Data_rozpoczęcia",  "Data_zakończenia",  "Imię",
             "Nazwisko",  "Miasto",  "Nr_telefonu",  "Adres_e-mail",  "Marka",  "Model",
             "Follow_up_1",  "Follow_up_2",  "Follow_up_3", "Przegląd techniczny", "Ubezpieczenie samochodu", "Rejestracja auta"]]
+        
         # Sort df on column that will be use in condition
         df_useful_columns_extracted.sort_values("Follow_up_1")
+
         # Format phone number to be clickable on mobile calendar
         df_useful_columns_extracted["Nr_telefonu"] = df_useful_columns_extracted["Nr_telefonu"].astype("str").apply(lambda x: x.replace(" ", ""))
-        df_useful_columns_extracted[["Follow_up_1",  "Follow_up_2",  "Follow_up_3", "Przegląd techniczny", "Ubezpieczenie samochodu", "Rejestracja auta"]] = df_useful_columns_extracted[["Follow_up_1",  "Follow_up_2",  "Follow_up_3", "Przegląd techniczny", "Ubezpieczenie samochodu", "Rejestracja auta"]].apply(pd.to_datetime, errors='coerce')
-
-
-
+        
+        # Format dates to datetime type
+        datetime_columns = ["Data_rozpoczęcia", "Data_zakończenia", "Follow_up_1", "Follow_up_2", "Follow_up_3", "Przegląd techniczny", "Ubezpieczenie samochodu", "Rejestracja auta"]
+        df_useful_columns_extracted[datetime_columns] = df_useful_columns_extracted[datetime_columns].apply(pd.to_datetime, errors='coerce')
 
         return df_useful_columns_extracted
     
