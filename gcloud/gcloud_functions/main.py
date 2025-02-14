@@ -1,6 +1,7 @@
 from utils.google_integration import GoogleServiceIntegrator
 from utils.data_transformation import DataTransformer
 from utils.utils import UtilsConfigurator
+from utils.mail_service import EmailService
 import functions_framework
 import os
 
@@ -20,6 +21,9 @@ def create_new_events(request, context=None):
     # Create utilities object
     DataConfiguratorObject = UtilsConfigurator()
     START, END = DataConfiguratorObject.timeframe_window()
+
+    # Create email service object
+    EmailServiceObject = EmailService()
 
     # Get SOURCE_FILE_URL from env
     SOURCE_FILE_URL = os.getenv("SOURCE_FILE_URL")
@@ -43,6 +47,11 @@ def create_new_events(request, context=None):
     GoogleServiceIntegratorObject.create_events_for_next_month(START, END, insurance_events_to_be_created, "Ubezpieczenie samochodu")
     GoogleServiceIntegratorObject.create_events_for_next_month(START, END, car_inspection_events_to_be_created, "Przegląd techniczny")
     GoogleServiceIntegratorObject.create_events_for_next_month(START, END, car_registration_events_to_be_created, "Rejestracja auta")
+
+    # Send emails to clients
+    EmailServiceObject.send_email("car_inspection", car_inspection_events_to_be_created)
+    EmailServiceObject.send_email("insurance", insurance_events_to_be_created)
+
 
     return "Events creation function finished"
 

@@ -51,15 +51,7 @@ class GoogleServiceIntegrator:
         creds_json = self.get_secret(project_id, secret_id)
         creds_data = json.loads(creds_json)
 
-        creds = service_account.Credentials.from_service_account_info(creds_data, scopes = SCOPES)
-        # creds = Credentials.from_authorized_user_info(creds_data)
-        # creds_expiration_date = creds.expired
-        # creds_refresh_token = creds.refresh_token
-        
-        # if creds and creds.expired and creds.refresh_token:
-        #     creds.refresh(Request())
-        #     self.update_secret(project_id, secret_id, creds.to_json())
-        #     return creds
+        creds = service_account.Credentials.from_service_account_info(creds_data, scopes = SCOPES) 
         return creds
 
     def get_google_services(self):
@@ -132,7 +124,7 @@ class GoogleServiceIntegrator:
         except HttpError as e:
             print(f"An error occurred: {e}")
 
-    def create_event(self, event: dict, type_of_event: str):
+    def create_event_in_calendar(self, event: dict, type_of_event: str):
         """
         Create event reminder for event from this month fetched by get_events_from_timeframe()
         """
@@ -169,6 +161,27 @@ class GoogleServiceIntegrator:
         except Exception as e:
             print(f'Creating event for {event["Imię"]} {event["Nazwisko"]} - {type_of_event} - {event["Marka"]} {event["Model"]} did not succeed: {e}')
 
+    def create_events_for_next_month(self, event_start_date, event_end_date, events_to_be_created, type_of_event):
+        if not events_to_be_created:
+            print("No upcoming follow up events - cannot proceed with events creation. Skipping to Insurance Events checking...")
+        else:
+            # Get follow up events from given timeframe
+            existing_next_month_events = self.get_events_list(event_start_date, event_end_date, type_of_event)
+
+            if not existing_next_month_events:
+                print("No existing events for following moth. Proceed with events creation.")
+                try:
+                    for event in events_to_be_created.values():
+                        self.create_event_in_calendar(event, type_of_event)
+                except Exception as e:
+                    print(f"Error while creating events {e}.")
+            else:
+                for event_to_be_created in events_to_be_created.values():
+                    if self.validate_if_event_already_exists_in_calendar(existing_next_month_events, event_to_be_created, type_of_event):
+
+                        # Create events in Google Calendar if event is not present in calendar
+                        self.create_event_in_calendar(event_to_be_created, type_of_event)
+                print("Process of creating follow up events finished successfully.")
 
     def validate_if_event_already_exists_in_calendar(self, existing_events_list, event_to_be_created, type_of_event) -> bool:
 
@@ -210,26 +223,6 @@ class GoogleServiceIntegrator:
         
         print("Events removed from calendar")
 
-    def create_events_for_next_month(self, event_start_date, event_end_date, events_to_be_created, type_of_event):
-        if not events_to_be_created:
-            print("No upcoming follow up events - cannot proceed with events creation. Skipping to Insurance Events checking...")
-        else:
-            # Get follow up events from given timeframe
-            existing_next_month_events = self.get_events_list(event_start_date, event_end_date, type_of_event)
 
-            if not existing_next_month_events:
-                print("No existing events for following moth. Proceed with events creation.")
-                try:
-                    for event in events_to_be_created.values():
-                        self.create_event(event, type_of_event)
-                except Exception as e:
-                    print(f"Error while creating events {e}.")
-            else:
-                for event_to_be_created in events_to_be_created.values():
-                    if self.validate_if_event_already_exists_in_calendar(existing_next_month_events, event_to_be_created, type_of_event):
-
-                        # Create events in Google Calendar if event is not present in calendar
-                        self.create_event(event_to_be_created, type_of_event)
-                print("Process of creating follow up events finished successfully.")
 
 
