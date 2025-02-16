@@ -59,20 +59,20 @@
 
         <!-- Powitanie -->
         <h1 style="color: #333333; margin-bottom: 20px;">
-            Witaj {event["Imię"]} {event["Nazwisko"]}!
+            Witaj {first_name} {last_name}!
         </h1>
 
         <!-- Treść -->
         <div style="margin-bottom: 30px;">
             <p style="margin-bottom: 15px;">
-                Pamiętaj o tym, że ubezpieczenie Twojego auta {event["Model"]} {event["Marka"]} jest ważne do dnia {event["data"]}<hr>
+                Pamiętaj o tym, że ubezpieczenie Twojego auta {brand} {model} jest ważne do dnia {car_insurance}<hr>
             </p>
         </div>
 
         <!-- Przycisk CTA -->
         <div style="text-align: center; margin: 30px 0;">
             <a href="{cta_url}" class="button">
-                {cta_text}
+                TBU
             </a>
         </div>
 

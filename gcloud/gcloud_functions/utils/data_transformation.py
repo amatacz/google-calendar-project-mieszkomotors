@@ -15,8 +15,12 @@ class DataTransformer:
         return df_useful_columns_extracted
 
     def load_source_file_from_gdrive(self, url: str):
+        # Wyłączamy ostrzeżenia o niezweryfikowanym SSL
+        import urllib3
+        urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
         # Load file from URL
-        response = requests.get(url)
+        response = requests.get(url, verify=False)
 
         # If status_coode is 200, load file using BytesIO and save it to DataFrame
         if response.status_code == 200:
@@ -30,18 +34,19 @@ class DataTransformer:
         pd.options.mode.chained_assignment = None
         
         # Choose only useful columns from df
-        df_useful_columns_extracted = df[["Data_rozpoczęcia",  "Data_zakończenia",  "Imię",
-            "Nazwisko",  "Miasto",  "Nr_telefonu",  "Adres_e-mail",  "Marka",  "Model",
-            "Follow_up_1",  "Follow_up_2",  "Follow_up_3", "Przegląd techniczny", "Ubezpieczenie samochodu", "Rejestracja auta"]]
+        df_useful_columns_extracted = df[["No.", "collaboration_start_date",  "collaboration_end_date",  "first_name",
+            "last_name",  "city",  "phone_number",  "e-mail",  "brand",  "model",
+            "follow_up_1",  "follow_up_2",  "follow_up_3", "car_inspection", "car_insurance", "car_registration",
+            "car_inspection_reminder", "car_insurance_reminder", "car_registration_reminder"]]
         
         # Sort df on column that will be use in condition
-        df_useful_columns_extracted.sort_values("Follow_up_1")
+        df_useful_columns_extracted.sort_values("follow_up_1")
 
         # Format phone number to be clickable on mobile calendar
-        df_useful_columns_extracted["Nr_telefonu"] = df_useful_columns_extracted["Nr_telefonu"].astype("str").apply(lambda x: x.replace(" ", ""))
+        df_useful_columns_extracted["phone_number"] = df_useful_columns_extracted["phone_number"].astype("str").apply(lambda x: x.replace(" ", ""))
         
         # Format dates to datetime type
-        datetime_columns = ["Data_rozpoczęcia", "Data_zakończenia", "Follow_up_1", "Follow_up_2", "Follow_up_3", "Przegląd techniczny", "Ubezpieczenie samochodu", "Rejestracja auta"]
+        datetime_columns = ["collaboration_start_date", "collaboration_end_date", "follow_up_1", "follow_up_2", "follow_up_3", "car_inspection", "car_insurance", "car_registration"]
         df_useful_columns_extracted[datetime_columns] = df_useful_columns_extracted[datetime_columns].apply(pd.to_datetime, errors='coerce')
 
         return df_useful_columns_extracted

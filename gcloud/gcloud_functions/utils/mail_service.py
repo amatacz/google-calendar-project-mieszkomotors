@@ -1,5 +1,5 @@
 from datetime import datetime, timedelta
-import sqlite3
+import pandas as pd
 from dataclasses import dataclass
 from typing import List
 import smtplib
@@ -7,21 +7,11 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from pathlib import Path
 import os
+from utils.google_integration import GoogleServiceIntegrator
 
 class EmailService():
     def __init__(self):
          self.smtp_config = os.getenv("SMTP_CONFIG")
-    
-    def get_email_details(self, event):
-        event["Model"] = "911"
-        event["Marka"] = "Porsche"
-        event["Imię"] = "Aleksandra"
-        event["Nazwisko"] = "Matacz"
-        event["type_of_event"] = "Ubezpieczenie"
-        event["data"] = "2025-02-29"
-        event["email"] = "aleksandra.matacz93@gmail.com"
-
-        return event
 
     def load_template(self, template_path):
         """Wczytuje szablon HTML z pliku"""
@@ -42,63 +32,85 @@ class EmailService():
         """
         try:
             # Wczytaj szablon
-            template = self.load_template(f".\\reminders_templates\\{type_of_event}.html")
-            
-            # Pobierz dane
-            event = event_details
-            
-            # Przygotuj słownik z możliwymi zmiennymi i ich formatami
-            variables = {
-                'Model': '{event["Model"]}',
-                'Marka': '{event["Marka"]}',
-                'Imię': '{event["Imię"]}',
-                'Nazwisko': '{event["Nazwisko"]}',
-                'data': '{event["data"]}'
-            }
+            #template = self.load_template(f".\\reminders_templates\\{type_of_event}.html")
+            raw_remplate = self.load_template(f"C:\\Users\\amatacz\\moje\\GoogleCalendarPythonIntegration\\gcloud\\gcloud_functions\\utils\\reminders_templates\\{type_of_event}.html")
+
+            # Inicjalizuj processed_template
+            processed_template = raw_remplate
             
             # Zastąp wszystkie zmienne w szablonie
-            processed_template = template
-            for key, placeholder in variables.items():
-                if key in event:
-                    processed_template = processed_template.replace(placeholder, str(event[key]))
+            for key, value in event_details.items():
+                if value is not pd.NaT:  # Sprawdź czy wartość nie jest NaT (Not a Time)
+                    value_str = str(value)
+                    # Jeśli to timestamp, sformatuj go odpowiednio
+                    if isinstance(value, pd.Timestamp):
+                        value_str = value.strftime('%Y-%m-%d')  # lub inny format daty
+                    processed_template = processed_template.replace(f"{{{key}}}", value_str)
                 else:
-                    raise KeyError(f"There is no key '{key}' in event dict.")
-                    
+                    processed_template = processed_template.replace(f"{{{key}}}", "")  # lub inna wartość domyślna dla NaT      
             return processed_template
             
         except FileNotFoundError:
-            raise FileNotFoundError(f"Unable to find template: {template}")
+            raise FileNotFoundError(f"Unable to find template: {raw_remplate}")
         except Exception as e:
-            raise Exception(f"Error during processing template: {str(e)}")
+            raise Exception(f"Error during processing template: {str(e)}.")
         
 
-    def get_smtp_config():
-        smtp_config = {
-                'server': 'smtp.gmail.com',
-                'port': 587,
-                'user': 'kontakt@mieszkomotors.com',
-                'password': 'ioep cbdn adti dalh'
-            }
-        return smtp_config
+    # def get_smtp_config(self):
+    #     smtp_config = {
+    #             'server': 'smtp.gmail.com',
+    #             'port': 587,
+    #             'user': 'kontakt@mieszkomotors.com',
+    #             'password': 'ioep cbdn adti dalh'
+    #         }
+    #     return smtp_config
 
-    def send_email(self, type_of_event, event):
-            """Wysyła przypomnienie email do klienta"""        
-            # Get details of event
-            # email_details = self.get_email_details()
+    def send_email(self, type_of_event, emails_to_be_sent, source_file_url, google_service_integrator):
+        """Wysyła przypomnienie email do klienta"""        
+        if not self.smtp_config:
+                self.smtp_config = self.get_smtp_config()
+        # email_details = self.get_email_details()
 
-            # Get email template and fill it with event details
-            filled_html_template = self.process_template(type_of_event, event)
+        for email in emails_to_be_sent.values():
+            reminder_column = f"{type_of_event}_reminder"
 
-            msg = MIMEMultipart()
-            msg['From'] = self.smtp_config['user']
-            msg['To'] = event["Adres_e-mail"]
-            msg['BCC'] = self.smtp_config["user"]
-            msg['Subject'] = f"Przypomnienie MieszkoMotors - TEST HTML"
-        
-            html_part = MIMEText(filled_html_template, "html")
-            msg.attach(html_part)
+            if email[reminder_column] != 'Sent':
+                try:
+                    # Get email template and fill it with event details
+                    filled_html_template = self.process_template(type_of_event, email)
+
+                    msg = MIMEMultipart()
+                    msg['From'] = self.smtp_config['user']
+                    msg['To'] = email["e-mail"]
+                    #msg['BCC'] = self.smtp_config["user"]
+                    msg['Subject'] = f'Przypomnienie MieszkoMotors - {type_of_event} - {email["brand"]} {email["model"]}'
+                    
+                    html_part = MIMEText(filled_html_template, "html")
+                    msg.attach(html_part)
+                        
+                    with smtplib.SMTP_SSL('smtp.gmail.com', 465) as server:
+                            server.login(msg['From'], self.smtp_config['password'])
+                            server.send_message(msg)
+                    print(f"{msg['Subject']} email sent")
+
+                    # Aktualizacja statusu w pliku
+                    update_success = google_service_integrator.update_xlsx_cell(
+                        file_url=source_file_url,
+                        column_name=reminder_column,
+                        row_index=email['No.'],  # Używamy index z emails_to_be_sent
+                        new_value='Sent'
+                    )
+
+                    if update_success:
+                        print(f"Successfully updated status for {email['e-mail']} in Google Drive")
+                    else:
+                        print(f"Failed to update status for {email['e-mail']} in Google Drive")
+                except Exception as e:
+                    print(f"Error processing email for {email['e-mail']}: {str(e)}")
+                    continue           
+
+
             
-            with smtplib.SMTP_SSL('smtp.gmail.com', 465) as server:
-                    server.login(msg['From'], self.smtp_config['password'])
-                    server.send_message(msg)
+
+            
     

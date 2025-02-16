@@ -3,11 +3,15 @@ from google.oauth2.credentials import Credentials
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
+from googleapiclient.http import MediaIoBaseUpload, MediaFileUpload
 from google.cloud.secretmanager import SecretManagerServiceClient 
-from google.auth.transport.requests import Request
 import os
 from datetime import datetime, timedelta
-
+import pandas as pd
+from io import BytesIO
+from google.auth.transport import requests
+import requests
+from google.auth.transport.requests import AuthorizedSession
 
 class GoogleServiceIntegrator:
     def __init__(self):
@@ -16,6 +20,7 @@ class GoogleServiceIntegrator:
         self.google_calendar_service = None
         self.gmail_service = None
         self.target_calendar_id = os.getenv("TARGET_CALENDAR_ID")
+
 
     def get_secret(self, project_id, secret_id, version_id="latest"):
         """
@@ -42,12 +47,13 @@ class GoogleServiceIntegrator:
         """
         # Define the scopes required
         SCOPES = [
-            "https://www.googleapis.com/auth/drive.metadata.readonly",
+            "https://www.googleapis.com/auth/drive",
+            "https://www.googleapis.com/auth/drive.files",
             "https://www.googleapis.com/auth/calendar",
-            "https://www.googleapis.com/auth/calendar.events"
+            "https://www.googleapis.com/auth/calendar.events",
+            "https://www.googleapis.com/auth/spreadsheets"
         ]
         
-
         creds_json = self.get_secret(project_id, secret_id)
         creds_data = json.loads(creds_json)
 
@@ -64,16 +70,22 @@ class GoogleServiceIntegrator:
             # Access the secret from Secret Manager
             credentials = self.get_credentials(PROJECT_ID, SECRET_ID)
 
+            # Tworzymy własną sesję z wyłączonym SSL
+            auth_session = AuthorizedSession(credentials)
+            auth_session.verify = False  # Wyłączamy weryfikację SSL
+
             # Build the Google Drive service
-            self.google_drive_service = build("drive", "v3", credentials=credentials)
+            self.google_drive_service = build("drive", "v3", credentials=credentials, discoveryServiceUrl='https://www.googleapis.com/discovery/v1/apis/drive/v3/rest')
             print("Google Drive Service created.")
 
             # Build the Google Calendar service
-            self.google_calendar_service = build("calendar", "v3", credentials=credentials)
+            self.google_calendar_service = build("calendar", "v3", credentials=credentials, discoveryServiceUrl='https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest')
             print("Google Calendar Service created.")
 
             # Build the Gmail service
-            self.gmail_service = build("gmail", "v1", credentials=credentials)
+            self.gmail_service = build("gmail", "v1", credentials=credentials, discoveryServiceUrl='https://www.googleapis.com/discovery/v1/apis/gmail/v1/rest')
+            print("Gmail Service created.")
+
 
         except Exception as e:
             print(f"Error occurred while creating Google services: {e}")
@@ -133,9 +145,9 @@ class GoogleServiceIntegrator:
 
 
         try:
-            description_html_string = f'Skontaktuj się z<br><b>{event["Imię"]} {event["Nazwisko"]}</b>, właścicielem auta <i>{event["Model"]} {event["Marka"]}</i>. W związku z {type_of_event} dnia {event[type_of_event]}<hr>Dane kontaktowe:<ul><li>Nr telefonu: <a href="tel:{event["Nr_telefonu"]}">{event["Nr_telefonu"]}</a></li><li>E-mail: {event["Adres_e-mail"]}</li></ul><hr>'
+            description_html_string = f'Skontaktuj się z<br><b>{event["first_name"]} {event["last_name"]}</b>, właścicielem auta <i>{event["model"]} {event["brand"]}</i>. W związku z {type_of_event} dnia {event[type_of_event]}<hr>Dane kontaktowe:<ul><li>Nr telefonu: <a href="tel:{event["Nr_telefonu"]}">{event["Nr_telefonu"]}</a></li><li>E-mail: {event["Adres_e-mail"]}</li></ul><hr>'
             event_dict = {
-                    'summary': f'{event["Imię"]} {event["Nazwisko"]} - {type_of_event} - {event["Marka"]} {event["Model"]}',
+                    'summary': f'{event["first_name"]} {event["last_name"]} - {type_of_event} - {event["brand"]} {event["model"]}',
                     'description': description_html_string,
                     'start': {
                         'dateTime': event[type_of_event].strftime('%Y-%m-%dT%H:%M:%S.%f')[:-3] + 'Z',
@@ -159,7 +171,7 @@ class GoogleServiceIntegrator:
             new_calendar_event = self.google_calendar_service.events().insert(calendarId=self.target_calendar_id, body=event_dict).execute()
             print(f'Event created: {new_calendar_event.get("summary")}')
         except Exception as e:
-            print(f'Creating event for {event["Imię"]} {event["Nazwisko"]} - {type_of_event} - {event["Marka"]} {event["Model"]} did not succeed: {e}')
+            print(f'Creating event for {event["first_name"]} {event["last_name"]} - {type_of_event} - {event["brand"]} {event["model"]} did not succeed: {e}')
 
     def create_events_for_next_month(self, event_start_date, event_end_date, events_to_be_created, type_of_event):
         if not events_to_be_created:
@@ -189,14 +201,14 @@ class GoogleServiceIntegrator:
         existing_events_list_summaries = [existing_event["summary"] for existing_event in existing_events_list]
 
         # Create summary string for event that we want to validate
-        event_to_be_created_summary = f'{event_to_be_created["Imię"]} {event_to_be_created["Nazwisko"]} - {type_of_event} - {event_to_be_created["Marka"]} {event_to_be_created["Model"]}'
+        event_to_be_created_summary = f'{event_to_be_created["first_name"]} {event_to_be_created["last_name"]} - {type_of_event} - {event_to_be_created["brand"]} {event_to_be_created["model"]}'
 
         # Validate if event that we want to create already exists
         if event_to_be_created_summary in existing_events_list_summaries:
             print(f"Event {event_to_be_created_summary} already exits!")
             return False
         else:
-            print(f"""This event does not exists. Creating event for {event_to_be_created["Imię"]} {event_to_be_created["Nazwisko"]}""")
+            print(f"""This event does not exists. Creating event for {event_to_be_created["first_name"]} {event_to_be_created["last_name"]}""")
             return True
 
 
@@ -223,6 +235,43 @@ class GoogleServiceIntegrator:
         
         print("Events removed from calendar")
 
+    def update_xlsx_cell(self, file_url: str, column_name: str, row_index: int, new_value: str):
+        """Aktualizuje komórkę w pliku XLSX"""
+        try:
+            # Pobierz plik
+            file_id = file_url.split('/')[-2]
+            request = self.google_drive_service.files().get_media(fileId=file_id)
 
+            # Wczytaj do pamięci
+            excel_data = BytesIO(request.execute())
+            df = pd.read_excel(excel_data)
 
+            # Aktualizuj wartość
+            df.at[row_index, column_name] = new_value
 
+            # Zapisz do bufora
+            output = BytesIO()
+            with pd.ExcelWriter(output, engine='openpyxl') as writer:
+                df.to_excel(writer, index=False)
+            output.seek(0)
+
+            # Upload zaktualizowanego pliku
+            media = MediaIoBaseUpload(
+                output,
+                mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                resumable=True,
+                chunksize=262144
+            )
+            
+            self.google_drive_service.files().update(
+                fileId=file_id,
+                media_body=media,
+                fields=column_name,
+                supportsAllDrives=True
+            ).execute()
+
+            return True
+
+        except Exception as e:
+            print(f"Error updating Excel file: {str(e)}")
+            return False
