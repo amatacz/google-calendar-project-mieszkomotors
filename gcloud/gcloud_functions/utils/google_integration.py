@@ -1,17 +1,15 @@
 import json
-from google.oauth2.credentials import Credentials
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
-from googleapiclient.http import MediaIoBaseUpload, MediaFileUpload
+from googleapiclient.http import MediaIoBaseUpload
+from google.auth.transport import requests
 from google.cloud.secretmanager import SecretManagerServiceClient 
 import os
-from datetime import datetime, timedelta
-import pandas as pd
+from datetime import timedelta
 from io import BytesIO
-from google.auth.transport import requests
 import requests
-from google.auth.transport.requests import AuthorizedSession
+import openpyxl
 
 class GoogleServiceIntegrator:
     def __init__(self):
@@ -29,6 +27,15 @@ class GoogleServiceIntegrator:
         name = f"projects/{project_id}/secrets/{secret_id}/versions/{version_id}"
         response = SecretManagerServiceClient().access_secret_version(name=name)
         return response.payload.data.decode('UTF-8')
+    
+    def get_smtp_config(self):
+        name = "projects/481715545022/secrets/smtp_config/versions/latest"
+        response = SecretManagerServiceClient().access_secret_version(name=name)
+        secret_data = response.payload.data.decode('UTF-8').replace("'", "\"")
+        # Parsuj JSON na słownik
+        smtp_config = json.loads(secret_data)
+
+        return smtp_config
 
     
     def update_secret(self, project_id, secret_id, secret_value):
@@ -47,11 +54,12 @@ class GoogleServiceIntegrator:
         """
         # Define the scopes required
         SCOPES = [
-            "https://www.googleapis.com/auth/drive",
-            "https://www.googleapis.com/auth/drive.files",
-            "https://www.googleapis.com/auth/calendar",
-            "https://www.googleapis.com/auth/calendar.events",
-            "https://www.googleapis.com/auth/spreadsheets"
+            'https://www.googleapis.com/auth/calendar',
+            'https://www.googleapis.com/auth/calendar.events',
+            'https://www.googleapis.com/auth/drive.metadata.readonly',
+            'https://www.googleapis.com/auth/drive.file',
+            'https://www.googleapis.com/auth/drive',
+            'https://www.googleapis.com/auth/spreadsheets'
         ]
         
         creds_json = self.get_secret(project_id, secret_id)
@@ -70,20 +78,16 @@ class GoogleServiceIntegrator:
             # Access the secret from Secret Manager
             credentials = self.get_credentials(PROJECT_ID, SECRET_ID)
 
-            # Tworzymy własną sesję z wyłączonym SSL
-            auth_session = AuthorizedSession(credentials)
-            auth_session.verify = False  # Wyłączamy weryfikację SSL
-
             # Build the Google Drive service
-            self.google_drive_service = build("drive", "v3", credentials=credentials, discoveryServiceUrl='https://www.googleapis.com/discovery/v1/apis/drive/v3/rest')
+            self.google_drive_service = build("drive", "v3", credentials=credentials)
             print("Google Drive Service created.")
 
             # Build the Google Calendar service
-            self.google_calendar_service = build("calendar", "v3", credentials=credentials, discoveryServiceUrl='https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest')
+            self.google_calendar_service = build("calendar", "v3", credentials=credentials)
             print("Google Calendar Service created.")
 
             # Build the Gmail service
-            self.gmail_service = build("gmail", "v1", credentials=credentials, discoveryServiceUrl='https://www.googleapis.com/discovery/v1/apis/gmail/v1/rest')
+            self.gmail_service = build("gmail", "v1", credentials=credentials)
             print("Gmail Service created.")
 
 
@@ -145,7 +149,7 @@ class GoogleServiceIntegrator:
 
 
         try:
-            description_html_string = f'Skontaktuj się z<br><b>{event["first_name"]} {event["last_name"]}</b>, właścicielem auta <i>{event["model"]} {event["brand"]}</i>. W związku z {type_of_event} dnia {event[type_of_event]}<hr>Dane kontaktowe:<ul><li>Nr telefonu: <a href="tel:{event["Nr_telefonu"]}">{event["Nr_telefonu"]}</a></li><li>E-mail: {event["Adres_e-mail"]}</li></ul><hr>'
+            description_html_string = f'Skontaktuj się z<br><b>{event["first_name"]} {event["last_name"]}</b>, właścicielem auta <i>{event["model"]} {event["brand"]}</i>. W związku z {type_of_event} dnia {event[type_of_event]}<hr>Dane kontaktowe:<ul><li>Nr telefonu: <a href="tel:{event["phone_number"]}">{event["phone_number"]}</a></li><li>E-mail: {event["e-mail"]}</li></ul><hr>'
             event_dict = {
                     'summary': f'{event["first_name"]} {event["last_name"]} - {type_of_event} - {event["brand"]} {event["model"]}',
                     'description': description_html_string,
@@ -239,34 +243,47 @@ class GoogleServiceIntegrator:
         """Aktualizuje komórkę w pliku XLSX"""
         try:
             # Pobierz plik
-            file_id = file_url.split('/')[-2]
-            request = self.google_drive_service.files().get_media(fileId=file_id)
+            response = requests.get(file_url, verify=False)
+            if response.status_code != 200:
+                raise Exception(f"Failed to download file: {response.status_code}")
 
             # Wczytaj do pamięci
-            excel_data = BytesIO(request.execute())
-            df = pd.read_excel(excel_data)
+            excel_data = BytesIO(response.content)
+            # Wczytaj istniejący workbook z zachowaniem formatowania
+            wb = openpyxl.load_workbook(excel_data)
+            ws = wb.active
 
-            # Aktualizuj wartość
-            df.at[row_index, column_name] = new_value
+            # Znajdź indeks kolumny
+            header_row = next(ws.rows)
+            column_index = None
+            for idx, cell in enumerate(header_row, 1):
+                if cell.value == column_name:
+                    column_index = idx
+                    break
+
+            if column_index is None:
+                raise ValueError(f"Column {column_name} not found in file")
+
+            # Aktualizuj konkretną komórkę
+            ws.cell(row=row_index+1, column=column_index, value=new_value)
 
             # Zapisz do bufora
             output = BytesIO()
-            with pd.ExcelWriter(output, engine='openpyxl') as writer:
-                df.to_excel(writer, index=False)
+            wb.save(output)
             output.seek(0)
 
             # Upload zaktualizowanego pliku
+            file_id = file_url.split('spreadsheets/d/')[1].split('/')[0]
             media = MediaIoBaseUpload(
                 output,
                 mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
                 resumable=True,
-                chunksize=262144
             )
-            
+
             self.google_drive_service.files().update(
                 fileId=file_id,
                 media_body=media,
-                fields=column_name,
+                fields='id',
                 supportsAllDrives=True
             ).execute()
 

@@ -8,9 +8,10 @@ class DataTransformer:
 
     def read_source_file_from_path(self, path=None):
         file = pd.read_excel("./MieszkoMotors_praca.xlsx", "Wykaz_realizacji").sort_values("Follow_up_1")
-        df_useful_columns_extracted = df[["Data_rozpoczęcia",  "Data_zakończenia",  "Imię",
-            "Nazwisko",  "Miasto",  "Nr_telefonu",  "Adres_e-mail",  "Marka",  "Model",
-            "Follow_up_1",  "Follow_up_2",  "Follow_up_3", "Przegląd techniczny", "Ubezpieczenie samochodu"]]
+        df_useful_columns_extracted = df[["No.", "collaboration_start_date",  "collaboration_end_date",  "first_name",
+            "last_name",  "city",  "phone_number",  "e-mail",  "brand",  "model",
+            "follow_up_1",  "follow_up_2",  "follow_up_3", "car_inspection", "car_insurance", "car_registration",
+            "car_inspection_reminder", "car_insurance_reminder", "car_registration_reminder"]]
 
         return df_useful_columns_extracted
 
@@ -44,11 +45,13 @@ class DataTransformer:
 
         # Format phone number to be clickable on mobile calendar
         df_useful_columns_extracted["phone_number"] = df_useful_columns_extracted["phone_number"].astype("str").apply(lambda x: x.replace(" ", ""))
+        df_useful_columns_extracted[["car_inspection_reminder", "car_insurance_reminder", "car_registration_reminder"]] = df_useful_columns_extracted[["car_inspection_reminder", "car_insurance_reminder", "car_registration_reminder"]].astype("str").apply(lambda x: x.replace(" ", ""))
         
         # Format dates to datetime type
         datetime_columns = ["collaboration_start_date", "collaboration_end_date", "follow_up_1", "follow_up_2", "follow_up_3", "car_inspection", "car_insurance", "car_registration"]
         df_useful_columns_extracted[datetime_columns] = df_useful_columns_extracted[datetime_columns].apply(pd.to_datetime, errors='coerce')
 
+        data_dict = df_useful_columns_extracted.to_dict(orient='index')
         return df_useful_columns_extracted
     
     def get_dict_of_events_from_timeframe(self, df, event_start_day, event_end_day, type_of_event):
