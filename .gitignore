@@ -18,4 +18,6 @@ env_google_calendar_events/
 secrets/
 notes.txt
 token.json
+mail_flow_example.py
+
 

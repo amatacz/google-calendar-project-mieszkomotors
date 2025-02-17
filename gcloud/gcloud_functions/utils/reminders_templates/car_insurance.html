@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Email Template</title>
+    <style type="text/css">
+        /* Resetowanie stylów dla klientów pocztowych */
+        body, p, div, h1, h2, h3, h4, h5, h6 {
+            margin: 0;
+            padding: 0;
+        }
+        
+        /* Style muszą być inline lub w sekcji <style>, zewnętrzne CSS nie zadziała */
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333333;
+        }
+
+        /* Kontener główny z max-width dla responsywności */
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #ffffff;
+        }
+
+        /* Media queries dla responsywności */
+        @media screen and (max-width: 600px) {
+            .container {
+                width: 100% !important;
+            }
+            
+            /* Dostosowanie obrazków */
+            img {
+                max-width: 100% !important;
+                height: auto !important;
+            }
+        }
+
+        /* Przyciski CTA */
+        .button {
+            display: inline-block;
+            padding: 12px 20px;
+            background-color: #007bff;
+            color: #ffffff;
+            text-decoration: none;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body style="margin: 0; padding: 0; background-color: #f4f4f4;">
+    <div class="container">
+        <!-- Logo/Nagłówek -->
+        <div style="text-align: center; padding: 20px;">
+            <img src="https://drive.google.com/thumbnail?id=15OaArbk9oBITPwdFmb0i-4LpvZJw_bGX" alt="Logo" style="max-width: 200px;">
+        </div>
+
+        <!-- Powitanie -->
+        <h1 style="color: #333333; margin-bottom: 20px;">
+            Witaj {first_name} {last_name}!
+        </h1>
+
+        <!-- Treść -->
+        <div style="margin-bottom: 30px;">
+            <p style="margin-bottom: 15px;">
+                Pamiętaj o tym, że ubezpieczenie Twojego auta {brand} {model} jest ważne do dnia {car_insurance}<hr>
+            </p>
+        </div>
+
+        <!-- Przycisk CTA -->
+        <div style="text-align: center; margin: 30px 0;">
+            <a href="{cta_url}" class="button">
+                TBU
+            </a>
+        </div>
+
+        <!-- Stopka -->
+        <table style="WIDTH:508px" cellspacing="0" cellpadding="0" border="0">
+            <tbody>
+            <tr>
+              <!-- Photo -->
+              <td style="FONT-SIZE:10pt;FONT-FAMILY:Helvetica;WIDTH:140px;PADDING-BOTTOM:10px;" valign="middle" align="center"><img border="0" hspace="0" alt="" src="https://drive.google.com/thumbnail?id=1uPU7cW8NcNcl4raqGh1ITI1ChGslUaiY" width="120" height="120"></td>
+              <td style="FONT-SIZE:10pt;FONT-FAMILY:Helvetica;WIDTH:25px" valign="top"></td>
+        
+              <!-- Imię, nazwisko, dane kontaktowe -->
+              <td style="FONT-SIZE:10pt;FONT-FAMILY:Helvetica;WIDTH:343px;PADDING-BOTTOM:10px" valign="top">
+                <p style="FONT-FAMILY:Helvetica;">
+                  <span style="FONT-SIZE:16pt"><strong><font style="COLOR:#131b62" color="#131b62">Mieszko Więcławski</font></strong></span>
+                  <span style="FONT-SIZE:14pt"><br></span>
+                    <font style="FONT-SIZE:10pt;COLOR:#000000" color="#000000">MieszkoMotors - Doradca Motoryzacyjny</font><br><br><span style="FONT-SIZE:10pt">
+                    <font color="#000000"><b>telefon: </b><a title="" style="TEXT-DECORATION:none;COLOR:#000000" href="tel:+48728352545" target="_blank">+48 728 352 545</a><br><b>email:</b> <a style="COLOR:#000000" href="mailto:kontakt@mieszkomotors.com" target="_blank">kontakt@mieszkomotors.<wbr>com</a></font></span></p></td>
+            </tr>
+            <tr>
+              <!-- Social media -->
+              <td valign="middle" align="center">
+                <!-- Facebook logo & link -->
+                <a href="https://www.facebook.com/mieszkomotors" target="_blank"><img src="https://drive.google.com/thumbnail?id=1eBCJkOnE4l71HOsY_r0eZl-hPKGh-uK_" border="0" width="30"></a>
+                <!-- Instagram logo & link -->
+                <a href="https://www.instagram.com/mieszkomotors" target="_blank"><img src="https://drive.google.com/thumbnail?id=12aWE3zIXGRTNMElpP0KOynQPUfgrUvwT" border="0" width="30"></a>        
+                <!-- LinkedIn logo & link -->
+                <a href="https://www.linkedin.com/company/mieszkomotors" target="_blank"><img src="https://drive.google.com/thumbnail?id=1-caNAS3LNreg7BZBKK-HM4t4iNCSpfnR" border="0" width="30"></a>
+                <!-- Meetup logo & link. Will be updated -->
+                <!-- <a href="https://meetup.com/pl-pl/c_tech" target="_blank">
+                  <img src="https://mail.google.com/mail/u/0?ui=2&ik=727d4730a0&attid=0.1.6&permmsgid=msg-f:1821976542354869073&th=1948f60314280b51&view=fimg&fur=ip&permmsgid=msg-f:1821976542354869073&sz=s0-l75-ft&attbid=ANGjdJ99zKDiZNRSJr_LwKuKf958s7g2CWOI1COA-xdj3emGSp4YPeQTxO_cVHeYebPfQB20Ozmd1eohYagkupK1dV3u0jkTBz_x0EiDCDc3JQEIrRHhtIhN_9pn5v8&disp=emb&zw" border="0" >
+                </a> -->
+              </td>
+              <!-- Empty table data cell to maintain structure -->
+              <td style="FONT-SIZE:10pt;FONT-FAMILY:Helvetica;WIDTH:25px" valign="middle"></td>
+              <!-- Table data cell with table inside -->
+              <td style="FONT-SIZE:10pt;FONT-FAMILY:Helvetica;WIDTH:343px" valign="middle">
+                <table style="HEIGHT:67px;WIDTH:313px" cellspacing="0" cellpadding="0" border="0">
+                  <tbody>
+                  <tr>
+                    <!-- Logo MieszkoMotors -->
+                    <td style="FONT-SIZE:10pt;FONT-FAMILY:Helvetica;WIDTH:196px" valign="middle"><a title="" href="https://www.mieszkomotors.com" target="_blank"><img src="https://drive.google.com/thumbnail?id=15OaArbk9oBITPwdFmb0i-4LpvZJw_bGX" border="0" width="120">
+                    </a></td>
+                    <!-- Zobacz opinie -->
+                    <td style="FONT-SIZE:10pt;FONT-FAMILY:Helvetica;WIDTH:141px;PADDING-LEFT:25px" valign="middle"><a title="" href="https://maps.app.goo.gl/wkRCEEWn2tfzcA5A6" target="_blank"><img src="https://drive.google.com/thumbnail?id=1QlPgzg8lJrHvUw1p6mWpUmM9pOnFq_i3" border="0" width="120" style="border-radius: 5px;"></a></td></tr>
+                  </tbody>
+                </table>
+              </td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+</body>
+</html>
