@@ -19,6 +19,5 @@ secrets/
 notes.txt
 token.json
 mail_flow_example.py
-gcloud/gcloud_functions/mail_service.py
 
 

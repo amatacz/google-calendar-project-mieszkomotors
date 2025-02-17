@@ -48,9 +48,9 @@ def create_new_events(request, context=None):
     GoogleServiceIntegratorObject.create_events_for_next_month(START, END, car_inspection_events_to_be_created, "car_inspection")
     GoogleServiceIntegratorObject.create_events_for_next_month(START, END, car_registration_events_to_be_created, "car_registration")
 
-    # Send emails to clients
-    EmailServiceObject.send_email("car_inspection", car_inspection_events_to_be_created, SOURCE_FILE_URL, GoogleServiceIntegratorObject)
-    EmailServiceObject.send_email("car_insurance", insurance_events_to_be_created, SOURCE_FILE_URL, GoogleServiceIntegratorObject)
+    # # Send emails to clients
+    # EmailServiceObject.send_email("car_inspection", car_inspection_events_to_be_created, SOURCE_FILE_URL, GoogleServiceIntegratorObject)
+    # EmailServiceObject.send_email("car_insurance", insurance_events_to_be_created, SOURCE_FILE_URL, GoogleServiceIntegratorObject)
 
     return "Events creation function finished"
 

@@ -34,7 +34,7 @@ steps:
       - workflows
       - deploy
       - workflow-google-calendar-events-develop
-      - --source=workflows/workflow-google-calendar-events.yaml
+      - --source=workflows/workflow-google-calendar-events-develop.yaml
       - --location=europe-west1
   # - name: "gcr.io/google.com/cloudsdktool/cloud-sdk"
   #   entrypoint: 'gcloud'
