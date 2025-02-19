@@ -119,10 +119,14 @@ class GoogleServiceIntegrator:
         start_date_formatted = start_date.strftime('%Y-%m-%dT%H:%M:%S.%f')[:-3] + 'Z'
         end_date_formatted = end_date.strftime('%Y-%m-%dT%H:%M:%S.%f')[:-3] + 'Z'
 
+        type_of_event_description_dict = {"car_registration": "rejestracja auta", "car_inspection": "przegląd techniczny",
+                                          "car_insurance": "ubezpieczenie samochodu", "follow_up_1": "pierwszy follow up",
+                                          "follow_up_2": "drugi follow up", "follow_up_3": "trzeci follow up"}        
+
         events_result = (
             self.google_calendar_service.events().list(
                 calendarId=self.target_calendar_id,
-                q=type_of_event,
+                q=type_of_event_description_dict[type_of_event],
                 timeMin=start_date_formatted,
                 timeMax=end_date_formatted,
                 singleEvents=True,
@@ -144,14 +148,18 @@ class GoogleServiceIntegrator:
         """
         Create event reminder for event from this month fetched by get_events_from_timeframe()
         """
-        if type_of_event=="Rejestracja auta":
+        if type_of_event=="car_registration":
             event[type_of_event] = event[type_of_event] + timedelta(days=10)
 
+        type_of_event_description_dict = {"car_registration": "rejestracja auta", "car_inspection": "przegląd techniczny",
+                                          "car_insurance": "ubezpieczenie samochodu", "follow_up_1": "pierwszy follow up",
+                                          "follow_up_2": "drugi follow up", "follow_up_3": "trzeci follow up"}
+        
 
         try:
-            description_html_string = f'Skontaktuj się z<br><b>{event["first_name"]} {event["last_name"]}</b>, właścicielem auta <i>{event["model"]} {event["brand"]}</i>. W związku z {type_of_event} dnia {event[type_of_event]}<hr>Dane kontaktowe:<ul><li>Nr telefonu: <a href="tel:{event["phone_number"]}">{event["phone_number"]}</a></li><li>E-mail: {event["e-mail"]}</li></ul><hr>'
+            description_html_string = f'Skontaktuj się z<br><b>{event["first_name"]} {event["last_name"]}</b>, właścicielem auta <i>{event["model"]} {event["brand"]}</i>. W związku z {type_of_event_description_dict[type_of_event]} dnia {event[type_of_event]}<hr>Dane kontaktowe:<ul><li>Nr telefonu: <a href="tel:{event["phone_number"]}">{event["phone_number"]}</a></li><li>E-mail: {event["e-mail"]}</li></ul><hr>'
             event_dict = {
-                    'summary': f'{event["first_name"]} {event["last_name"]} - {type_of_event} - {event["brand"]} {event["model"]}',
+                    'summary': f'{event["first_name"]} {event["last_name"]} - {type_of_event_description_dict[type_of_event]} - {event["brand"]} {event["model"]}',
                     'description': description_html_string,
                     'start': {
                         'dateTime': event[type_of_event].strftime('%Y-%m-%dT%H:%M:%S.%f')[:-3] + 'Z',
@@ -175,7 +183,7 @@ class GoogleServiceIntegrator:
             new_calendar_event = self.google_calendar_service.events().insert(calendarId=self.target_calendar_id, body=event_dict).execute()
             print(f'Event created: {new_calendar_event.get("summary")}')
         except Exception as e:
-            print(f'Creating event for {event["first_name"]} {event["last_name"]} - {type_of_event} - {event["brand"]} {event["model"]} did not succeed: {e}')
+            print(f'Creating event for {event["first_name"]} {event["last_name"]} - {type_of_event_description_dict[type_of_event]} - {event["brand"]} {event["model"]} did not succeed: {e}')
 
     def create_events_for_next_month(self, event_start_date, event_end_date, events_to_be_created, type_of_event):
         if not events_to_be_created:
@@ -194,18 +202,22 @@ class GoogleServiceIntegrator:
             else:
                 for event_to_be_created in events_to_be_created.values():
                     if self.validate_if_event_already_exists_in_calendar(existing_next_month_events, event_to_be_created, type_of_event):
-
                         # Create events in Google Calendar if event is not present in calendar
                         self.create_event_in_calendar(event_to_be_created, type_of_event)
-                print("Process of creating follow up events finished successfully.")
+                print(f"Process of creating {type_of_event} events finished successfully.")
 
     def validate_if_event_already_exists_in_calendar(self, existing_events_list, event_to_be_created, type_of_event) -> bool:
+
+
+        type_of_event_description_dict = {"car_registration": "rejestracja auta", "car_inspection": "przegląd techniczny",
+                                          "car_insurance": "ubezpieczenie samochodu", "follow_up_1": "pierwszy follow up",
+                                          "follow_up_2": "drugi follow up", "follow_up_3": "trzeci follow up"}        
 
         # Get list of existing events summaries from existing events fetched from calendar
         existing_events_list_summaries = [existing_event["summary"] for existing_event in existing_events_list]
 
         # Create summary string for event that we want to validate
-        event_to_be_created_summary = f'{event_to_be_created["first_name"]} {event_to_be_created["last_name"]} - {type_of_event} - {event_to_be_created["brand"]} {event_to_be_created["model"]}'
+        event_to_be_created_summary = f'{event_to_be_created["first_name"]} {event_to_be_created["last_name"]} - {type_of_event_description_dict[type_of_event]} - {event_to_be_created["brand"]} {event_to_be_created["model"]}'
 
         # Validate if event that we want to create already exists
         if event_to_be_created_summary in existing_events_list_summaries:
