@@ -1,15 +1,16 @@
-import json
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 from googleapiclient.http import MediaIoBaseUpload
 from google.auth.transport import requests
 from google.cloud.secretmanager import SecretManagerServiceClient 
-import os
 from datetime import timedelta
 from io import BytesIO
+import os
+import json
 import requests
 import openpyxl
+
 
 class GoogleServiceIntegrator:
     def __init__(self):
@@ -157,7 +158,10 @@ class GoogleServiceIntegrator:
         
 
         try:
-            description_html_string = f'Skontaktuj się z<br><b>{event["first_name"]} {event["last_name"]}</b>, właścicielem auta <i>{event["model"]} {event["brand"]}</i>. W związku z {type_of_event_description_dict[type_of_event]} dnia {event[type_of_event]}<hr>Dane kontaktowe:<ul><li>Nr telefonu: <a href="tel:{event["phone_number"]}">{event["phone_number"]}</a></li><li>E-mail: {event["e-mail"]}</li></ul><hr>'
+            description_html_string = f'''Skontaktuj się z<br><b>{event["first_name"]} {event["last_name"]}</b>, właścicielem auta <i>{event["model"]} {event["brand"]}</i>.
+W związku z {type_of_event_description_dict[type_of_event]} dnia {event[type_of_event]}<hr>
+Dane kontaktowe:<ul><li>Nr telefonu: <a href="tel:{event["phone_number"]}">{event["phone_number"]}</a></li><li>E-mail: {event["e-mail"]}</li></ul><hr>'''
+
             event_dict = {
                     'summary': f'{event["first_name"]} {event["last_name"]} - {type_of_event_description_dict[type_of_event]} - {event["brand"]} {event["model"]}',
                     'description': description_html_string,
@@ -181,6 +185,7 @@ class GoogleServiceIntegrator:
                     'colorId': '3'
                     }
             new_calendar_event = self.google_calendar_service.events().insert(calendarId=self.target_calendar_id, body=event_dict).execute()
+            
             print(f'Event created: {new_calendar_event.get("summary")}')
         except Exception as e:
             print(f'Creating event for {event["first_name"]} {event["last_name"]} - {type_of_event_description_dict[type_of_event]} - {event["brand"]} {event["model"]} did not succeed: {e}')
