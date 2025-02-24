@@ -143,16 +143,30 @@ class DataTransformer:
         return df_transformed
 
     def get_dict_of_events_from_timeframe(self, df, event_start_day, event_end_day, type_of_event):
-        # Get new events
+        """
+        Chosses events from events dataframe that are within given start and end date.
+        Args:
+            df: DataFrame with client data
+            event_start_day: Datetime
+            event_end_day: Datetime
+            type_of_event: string with type of event
+        Returns:
+            dict: dictionary with relevant events and details
+        Raises:
+            ValueError: When the required dataframe is empty
+            Exception: For other errors during file reading or processing
+        """
+
         try:
+            # Get only relevant events
             events_df = df[(df[type_of_event] >= event_start_day) & (df[type_of_event] <= event_end_day)]
             events_df.reset_index(drop=True, inplace=True)
 
-            # Save insurance events as dictionary
+            # Save events as dictionary
             events_dict = events_df.to_dict(orient="index")
             return events_dict
         except Exception as e:
-            print(f"Error occured while catching new {type_of_event} events: {e}")
+            print(f"Error occured while catching {type_of_event} events from {event_start_day} and {event_end_day}: {e}")
 
 
 

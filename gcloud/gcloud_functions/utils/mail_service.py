@@ -7,6 +7,14 @@ import os
 class EmailService():
     def __init__(self):
          self.smtp_config = os.getenv("SMTP_CONFIG")
+         self.EVENT_TYPES = {
+            "car_registration": "rejestracja auta",
+            "car_inspection": "przegląd techniczny",
+            "car_insurance": "ubezpieczenie samochodu",
+            "follow_up_1": "pierwszy follow up",
+            "follow_up_2": "drugi follow up",
+            "follow_up_3": "trzeci follow up"
+        }  
 
     def load_template(self, template_path):
         """
@@ -85,11 +93,6 @@ class EmailService():
                 print(f"Failed to retrieve SMTP configuration")
                 return None
         
-        # Dictionary mapping event codes to their descriptions in Polish
-        type_of_event_description_dict = {"car_registration": "rejestracja auta", "car_inspection": "przegląd techniczny",
-                                        "car_insurance": "ubezpieczenie samochodu", "follow_up_1": "pierwszy follow up",
-                                        "follow_up_2": "drugi follow up", "follow_up_3": "trzeci follow up"}    
-        
         for index, email_data in emails_to_be_sent.items():
             # Determine reminder status column name based on event type
             reminder_column = f"{type_of_event}_reminder"
@@ -100,13 +103,15 @@ class EmailService():
                 try:
                     # Prepare email message based on template
                     filled_html_template = self.process_template(type_of_event, email_data)
-                    
+
+
                     # Configure email message headers
                     msg = MIMEMultipart()
                     msg['From'] = smtp_config['user']
                     msg['To'] = email_data["e-mail"]
                     msg['BCC'] = smtp_config["user"]
-                    msg['Subject'] = f'[IMPORTANT] {type_of_event_description_dict[type_of_event]} requires renewal - {email_data["brand"]} {email_data["model"]} - MieszkoMotors'
+                    msg['Subject'] = f'[WAŻNE] {self.EVENT_TYPES[type_of_event]} wymaga odnowienia - {email_data["brand"]} {email_data["model"]} - MieszkoMotors'
+
                     
                     # Attach HTML content to the message
                     html_part = MIMEText(filled_html_template, "html")
