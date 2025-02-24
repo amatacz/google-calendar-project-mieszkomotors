@@ -1,15 +1,17 @@
-import json
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
+from google.api_core.exceptions import GoogleAPIError
 from googleapiclient.http import MediaIoBaseUpload
 from google.auth.transport import requests
 from google.cloud.secretmanager import SecretManagerServiceClient 
-import os
-from datetime import timedelta
+from datetime import timedelta, datetime
 from io import BytesIO
+import os
+import json
 import requests
 import openpyxl
+
 
 class GoogleServiceIntegrator:
     def __init__(self):
@@ -18,23 +20,60 @@ class GoogleServiceIntegrator:
         self.google_calendar_service = None
         self.gmail_service = None
         self.target_calendar_id = os.getenv("TARGET_CALENDAR_ID")
+        self.EVENT_TYPES = {
+            "car_registration": "rejestracja auta",
+            "car_inspection": "przegląd techniczny",
+            "car_insurance": "ubezpieczenie samochodu",
+            "follow_up_1": "pierwszy follow up",
+            "follow_up_2": "drugi follow up",
+            "follow_up_3": "trzeci follow up"
+        }        
 
 
     def get_secret(self, project_id, secret_id, version_id="latest"):
         """
-        Get value of given secret from Secret Manager
+        Extracts  value of given secret from Secret Manager.
+        Args:
+            project_id: string with project_id 
+            secret_id: string with secret_id
+            version_id: string, secret version, by default the latest
+        Returns:
+            str: decoded secret value
+        Raises:
+            ValueError: When the required dataframe is missing
+            Exception: For other errors during file reading or processing
         """
+        if not project_id or not secret_id:
+            raise ValueError("project_id and secret_id must be non empty strings")
+        
+        # Concatenate all info into secret name
         name = f"projects/{project_id}/secrets/{secret_id}/versions/{version_id}"
-        response = SecretManagerServiceClient().access_secret_version(name=name)
+        try:
+            response = SecretManagerServiceClient().access_secret_version(name=name)
+        except Exception as e:
+            raise Exception(f"Error during getting secret from Secret Manager Client: {e}")
         return response.payload.data.decode('UTF-8')
     
-    def get_smtp_config(self):
-        name = "projects/481715545022/secrets/smtp_config/versions/latest"
-        response = SecretManagerServiceClient().access_secret_version(name=name)
-        secret_data = response.payload.data.decode('UTF-8').replace("'", "\"")
+    
+    def get_smtp_config(self, project_id=None, secret_id=None):
+        """
+        Extracts smtp_config from SecretManager by invoking get_secret function.
+        Args:
+            project_id: str with project id, if not provided got from env
+            secret_id: str with secret id, if not provided got from env
+        Returns:
+            str: decoded smtp config value
+        """        
+        if not project_id:
+            project_id = os.getenv("PROJECT_ID")
+        if not secret_id:
+            secret_id = os.getenv("SMTP_CONFIG_SECRET")
+
+        # return self.get_secret(project_id, secret_id)
+    
+        secret_data = self.get_secret(project_id, secret_id).replace("'", "\"")
         # Parsuj JSON na słownik
         smtp_config = json.loads(secret_data)
-
         return smtp_config
 
     
@@ -47,11 +86,21 @@ class GoogleServiceIntegrator:
             request={"parent": parent, "payload": {"data": secret_value.encode("UTF-8")}}
             )
         
-    def get_credentials(self, project_id, secret_id):
+    def get_service_account_credentials(self, project_id=None, secret_id=None):
         """
-        Authenticate user using secrets from Secret Manager.
-        Update token if expired.
+        Getting service account credentials using secrets from Secret Manager.
+        Args:
+            project_id: optional str with project id
+            secret_id: optional str with secret id
+        Returns:
+            str: credentials needed to authenticate user
+        Raises:
+            ValueError: When the required dataframe is missing
+            KeyError: When the required colum name is missing 
+            Exception: For other errors during file reading or processing
         """
+
+
         # Define the scopes required
         SCOPES = [
             'https://www.googleapis.com/auth/calendar',
@@ -61,23 +110,35 @@ class GoogleServiceIntegrator:
             'https://www.googleapis.com/auth/drive',
             'https://www.googleapis.com/auth/spreadsheets'
         ]
-        
+
         creds_json = self.get_secret(project_id, secret_id)
         creds_data = json.loads(creds_json)
+        if not creds_data:
+            raise ValueError("Credentials cannot be empty JSON")
+        
+        try:
+            creds = service_account.Credentials.from_service_account_info(creds_data, scopes = SCOPES) 
+        except Exception as e:
+            raise Exception(f"Error occured while getting credentials {e}")
 
-        creds = service_account.Credentials.from_service_account_info(creds_data, scopes = SCOPES) 
         return creds
 
     def get_google_services(self):
-        """Authenticate and create Google Drive and Calendar services using service account credentials."""
+        """
+        Authenticate and create Google services using service account credentials.
+        Returns: Google services
+        """
         
         PROJECT_ID = os.getenv("PROJECT_ID")
         SECRET_ID = os.getenv("SECRET_ID")
         
         try:
             # Access the secret from Secret Manager
-            credentials = self.get_credentials(PROJECT_ID, SECRET_ID)
-
+            credentials = self.get_service_account_credentials(PROJECT_ID, SECRET_ID)
+        except Exception as e:
+            raise Exception(f"Issue with getting service account credentials {e}")
+        
+        try:
             # Build the Google Drive service
             self.google_drive_service = build("drive", "v3", credentials=credentials)
             print("Google Drive Service created.")
@@ -89,76 +150,276 @@ class GoogleServiceIntegrator:
             # Build the Gmail service
             self.gmail_service = build("gmail", "v1", credentials=credentials)
             print("Gmail Service created.")
-
-
         except Exception as e:
-            print(f"Error occurred while creating Google services: {e}")
-            raise e
+            raise Exception(f"Error occurred while creating Google services: {e}")
         
         return self.google_drive_service, self.google_calendar_service, self.gmail_service
+    
 
     def get_source_file_url(self,
                             file_name: str = "MieszkoMotors_praca.xlsx",
                             format: str = "xlsx"):
-        # Call the Drive v3 API
-        results = (
-            self.google_drive_service.files().list(pageSize=10, fields="nextPageToken, files(id, name)").execute()
-        )
-        items = results.get("files", [])
+        """
+        Gets URL of source file from files available in Google Drive.
+        
+        Args:
+            file_name (str): Name of the file to search for
+            format (str): Desired export format of the file
+            
+        Returns:
+            str: URL of file that will be processed or None if file not found
+            
+        Raises:
+            ValueError: When file_name or format is empty/invalid
+            GoogleAPIError: When there's an issue with Google Drive API
+            Exception: For unexpected errors
+        """
+        # Input validation
+        if not file_name or not format:
+            raise ValueError("File name and format must not be empty")
+        
+        try:
+            # Call the Drive v3 API with specific fields
+            results = self.google_drive_service.files().list(
+                pageSize=10,  # Consider making this configurable
+                fields="files(id, name)",  # Removed nextPageToken as it's not used
+                orderBy="modifiedTime desc"  # Optional: get most recent files first
+            ).execute()
+            
+            items = results.get("files", [])
+            
+            if not items:
+                print("No files found in Google Drive")
+                return None
+                
+            # Create files dictionary and get URL
+            files_dict = {item['name']: item['id'] for item in items}
+            file_id = files_dict.get(file_name)
+            
+            if not file_id:
+                print(f"File '{file_name}' not found in Google Drive")
+                return None
+                
+            return f"https://docs.google.com/spreadsheets/d/{file_id}/export?format={format}"
+        except GoogleAPIError as e:
+            raise GoogleAPIError(f"GoogleAPIError - Failed to get file URL from Google Drive: {str(e)}.")
+        except Exception as e:
+            raise Exception(f"Failed to get file URL from Google Drive: {str(e)}")
 
-        if not items:
-            print("No source files found.")
-            return None
-        for item in items:
-            if item['name'] == file_name:
-                return f"https://docs.google.com/spreadsheets/d/{item['id']}/export?format={format}"
 
-    def get_events_list(self, start_date=None, end_date=None, type_of_event=None):
-        # Getting current datetime, but in UTC in isoformat:
-        # formatting and cutting off last 3 digits to get rid of microseconds) and append 'Z'
-        start_date_formatted = start_date.strftime('%Y-%m-%dT%H:%M:%S.%f')[:-3] + 'Z'
-        end_date_formatted = end_date.strftime('%Y-%m-%dT%H:%M:%S.%f')[:-3] + 'Z'
+    def get_events_list(
+        self, 
+        start_date: datetime = None, 
+        end_date: datetime = None, 
+        type_of_event: str = None
+    ) -> list:
+        """
+        Retrieves list of events from Google Calendar within specified date range.
+        
+        Args:
+            start_date (datetime): Start date for events search
+            end_date (datetime): End date for events search
+            type_of_event (str): Type of event to search for (e.g. 'car_registration')
+            
+        Returns:
+            list: List of calendar events or empty list if none found
+            
+        Raises:
+            ValueError: When required parameters are missing or invalid
+            HttpError: When Google Calendar API request fails
+            Exception: For other unexpected errors
+        """
+        # Input validation
+        if not all([start_date, end_date, type_of_event]):
+            raise ValueError("start_date, end_date, and type_of_event are required")
+            
+        if start_date > end_date:
+            raise ValueError("start_date cannot be later than end_date")
+        
+        if type_of_event not in self.EVENT_TYPES:
+            raise ValueError(f"Invalid type_of_event. Must be one of: {', '.join(self.EVENT_TYPES.keys())}")
 
-        events_result = (
-            self.google_calendar_service.events().list(
+        try:
+            # Format dates for API (ISO format with 'Z' suffix)
+            start_date_formatted = self._format_date_for_api(start_date)
+            end_date_formatted = self._format_date_for_api(end_date)
+            
+            # Get events from Google Calendar
+            events_result = self.google_calendar_service.events().list(
                 calendarId=self.target_calendar_id,
-                q=type_of_event,
+                q=self.EVENT_TYPES[type_of_event],
                 timeMin=start_date_formatted,
                 timeMax=end_date_formatted,
                 singleEvents=True,
-                orderBy="startTime",
+                orderBy="startTime"
             ).execute()
-        )
-        events = events_result.get("items", [])
-
-        try: 
-            if events:
-                return events
-            else:
+            
+            events = events_result.get("items", [])
+            
+            if not events:
                 print(f"No {type_of_event} events found.")
-                return []
+                
+            return events
+            
         except HttpError as e:
-            print(f"An error occurred: {e}")
+            print(f"Google Calendar API error: {str(e)}")
+            raise
+        except Exception as e:
+            raise Exception(f"Failed to retrieve events: {str(e)}")
 
-    def create_event_in_calendar(self, event: dict, type_of_event: str):
+    def create_events_for_next_month(self, event_start_date, event_end_date, events_to_be_created, type_of_event):
         """
-        Create event reminder for event from this month fetched by get_events_from_timeframe()
+        Creates calendar events for the next month based on provided events list.
+        
+        Args:
+            event_start_date (datetime): Start date for the event search range
+            event_end_date (datetime): End date for the event search range
+            events_to_be_created (dict): Dictionary of events to create
+            type_of_event (str): Type of events to create
+            
+        Raises:
+            ValueError: When required parameters are missing
+            Exception: For errors during event creation or validation
         """
-        if type_of_event=="Rejestracja auta":
-            event[type_of_event] = event[type_of_event] + timedelta(days=10)
 
-
+        # # Input validation
+        # if not all([event_start_date, event_end_date, events_to_be_created, type_of_event]):
+        #     raise ValueError("start_date, end_date, events_to_be_created and type_of_event are required")
+        
         try:
-            description_html_string = f'Skontaktuj się z<br><b>{event["first_name"]} {event["last_name"]}</b>, właścicielem auta <i>{event["model"]} {event["brand"]}</i>. W związku z {type_of_event} dnia {event[type_of_event]}<hr>Dane kontaktowe:<ul><li>Nr telefonu: <a href="tel:{event["phone_number"]}">{event["phone_number"]}</a></li><li>E-mail: {event["e-mail"]}</li></ul><hr>'
+            # Get calendar events from given timeframe that already exists
+            existing_next_month_events = self.get_events_list(event_start_date, event_end_date, type_of_event)
+
+            # Case 1: No existing events, create all new events
+            if not existing_next_month_events:
+                print(f"No existing {type_of_event} events for following moth. No validation needed.")
+                print(f"Proceed with creating {len(events_to_be_created)} events...")
+
+                created_count = 0
+                for event in events_to_be_created.values():
+                    try:
+                        self._create_event_in_calendar(event, type_of_event)
+                        created_count += 1
+                    except Exception as e:
+                        print(f"Error creating event for {event.get('first_name', '')} {event.get('last_name', '')}: {str(e)}")
+                print(f"Successfully created {created_count} of {len(events_to_be_created)} events.")
+            # Case 2: Existing events found, validate before creating
+            else:
+                print(f"Found {len(existing_next_month_events)} existing events for next month.")
+                print(f"Validating {len(events_to_be_created)} events before creation...")
+                
+                created_count = 0
+                skipped_count = 0
+            
+                for event_to_be_created in events_to_be_created.values():
+                    try:
+                        if self._validate_if_event_can_be_created_in_calendar(
+                            existing_next_month_events, event_to_be_created, type_of_event
+                            ):
+                            self._create_event_in_calendar(event_to_be_created, type_of_event)
+                            created_count += 1
+                        else:
+                            skipped_count += 1
+                    except Exception as e:
+                        print(f'Error processing event for {event_to_be_created["first_name"]} {event_to_be_created["last_name"]}: {str(e)}')
+                print(f"Process completed: {created_count} events created, {skipped_count} events skipped (already exist).")
+            print(f"Process of creating {type_of_event} events finished successfully.")
+        except Exception as e:
+            raise Exception(f"Failed to create {type_of_event} events: {str(e)}")
+
+    def _validate_if_event_can_be_created_in_calendar(self, existing_events_list, event_to_be_created, type_of_event) -> bool:
+        """
+        Function invoked to avoid events duplication.
+        Validates if calendar event already exists by looking for summary of this event in list of summaries of calendar events
+        that already exits in given timeframe.
+
+        Args:
+            existing_events_list (list): list of events that already exists in calendar for given timeframe
+            event_to_be_created (dict): event that should be validated if already exists in calendar
+            type_of_event (str): string with type of event
+        Returns:
+            bool: True -> if event does not exists in calendar and can be created
+                  False -> if event already exists in calendar and should not be created
+        Raises:
+            ValueError: When required parameters are missing
+            ValueError: When type_of_event is invalid            
+            Exception: for unexpected errors
+        """
+        # Validate inputs
+        if not all([existing_events_list, event_to_be_created, type_of_event]):
+            raise ValueError("existing_events_list, event_to_be_created, type_of_event are required")
+        
+        if type_of_event not in self.EVENT_TYPES:
+            raise ValueError(f"Invalid type_of_event. Must be one of: {', '.join(self.EVENT_TYPES.keys())}")
+    
+        
+        # Create summary string for event that we want to validate
+        event_to_be_created_summary = (
+            f'{event_to_be_created["first_name"]} {event_to_be_created["last_name"]} - '
+            f'{self.EVENT_TYPES[type_of_event]} - '
+            f'{event_to_be_created["brand"]} {event_to_be_created["model"]}'
+        )
+        try: 
+            # Check if event summary exists in list of existing event summaries
+            for existing_event in existing_events_list:
+                if existing_event.get("summary") == event_to_be_created_summary:
+                    print(f"Event {event_to_be_created_summary} already exits!")
+                    return False
+            
+            print(f"""This event does not exist. Creating event for {event_to_be_created["first_name"]} {event_to_be_created["last_name"]} - {self.EVENT_TYPES[type_of_event]}""")
+            return True
+
+        except Exception as e:
+            raise Exception(f"Issue occured when event was validated: {e}")
+        
+    def _create_event_in_calendar(self, event: dict, type_of_event: str):
+        """
+        Create event reminder for event from this month fetched by get_events_from_timeframe().
+        Args:
+            event (dict): dictionary with details of event that should be created in calendar
+            type_of_event (str): string with type of event that should be created in calendar
+        Raises:
+            ValueError: When event or type_of_event is empty/invalid
+            GoogleAPIError: When there's an issue with Google Drive API
+            Exception: For unexpected errors
+        """
+        # Validate input
+        if not all([event, type_of_event]):
+            raise ValueError("event, type_of_event are required")
+        
+        try:
+            # Add 10 days to car registration event date - when client should pick up car documents
+            if type_of_event=="car_registration":
+                event[type_of_event] = event[type_of_event] + timedelta(days=10)
+
+            # Create event description in HTML format
+            description_html_string = (
+                f'Skontaktuj się z<br>'
+                f'<b>{event["first_name"]} {event["last_name"]}</b>, '
+                f'właścicielem auta <i>{event["model"]} {event["brand"]}</i>. '
+                f'W związku z {self.EVENT_TYPES[type_of_event]} dnia {event[type_of_event]}<hr>'
+                f'Dane kontaktowe:<ul>'
+                f'<li>Nr telefonu: <a href="tel:{event["phone_number"]}">{event["phone_number"]}</a></li>'
+                f'<li>E-mail: {event["e-mail"]}</li>'
+                f'</ul><hr>'
+            )
+            
+            # Create event summary
+            summary_string = (
+                f'{event["first_name"]} {event["last_name"]} - '
+                f'{self.EVENT_TYPES[type_of_event]} - '
+                f'{event["brand"]} {event["model"]}'
+            )
+
             event_dict = {
-                    'summary': f'{event["first_name"]} {event["last_name"]} - {type_of_event} - {event["brand"]} {event["model"]}',
+                    'summary': summary_string,
                     'description': description_html_string,
                     'start': {
-                        'dateTime': event[type_of_event].strftime('%Y-%m-%dT%H:%M:%S.%f')[:-3] + 'Z',
+                        'dateTime': self._format_date_for_api(event[type_of_event]),
                         'timeZone': 'Europe/Warsaw',
                     },
                     'end': {
-                        'dateTime': event[type_of_event].strftime('%Y-%m-%dT%H:%M:%S.%f')[:-3] + 'Z',
+                        'dateTime': self._format_date_for_api(event[type_of_event]),
                         'timeZone': 'Europe/Warsaw',
                     },
                     'reminders': {
@@ -172,72 +433,28 @@ class GoogleServiceIntegrator:
                     'visibility': 'private',
                     'colorId': '3'
                     }
-            new_calendar_event = self.google_calendar_service.events().insert(calendarId=self.target_calendar_id, body=event_dict).execute()
-            print(f'Event created: {new_calendar_event.get("summary")}')
-        except Exception as e:
-            print(f'Creating event for {event["first_name"]} {event["last_name"]} - {type_of_event} - {event["brand"]} {event["model"]} did not succeed: {e}')
-
-    def create_events_for_next_month(self, event_start_date, event_end_date, events_to_be_created, type_of_event):
-        if not events_to_be_created:
-            print("No upcoming follow up events - cannot proceed with events creation. Skipping to Insurance Events checking...")
-        else:
-            # Get follow up events from given timeframe
-            existing_next_month_events = self.get_events_list(event_start_date, event_end_date, type_of_event)
-
-            if not existing_next_month_events:
-                print("No existing events for following moth. Proceed with events creation.")
-                try:
-                    for event in events_to_be_created.values():
-                        self.create_event_in_calendar(event, type_of_event)
-                except Exception as e:
-                    print(f"Error while creating events {e}.")
-            else:
-                for event_to_be_created in events_to_be_created.values():
-                    if self.validate_if_event_already_exists_in_calendar(existing_next_month_events, event_to_be_created, type_of_event):
-
-                        # Create events in Google Calendar if event is not present in calendar
-                        self.create_event_in_calendar(event_to_be_created, type_of_event)
-                print("Process of creating follow up events finished successfully.")
-
-    def validate_if_event_already_exists_in_calendar(self, existing_events_list, event_to_be_created, type_of_event) -> bool:
-
-        # Get list of existing events summaries from existing events fetched from calendar
-        existing_events_list_summaries = [existing_event["summary"] for existing_event in existing_events_list]
-
-        # Create summary string for event that we want to validate
-        event_to_be_created_summary = f'{event_to_be_created["first_name"]} {event_to_be_created["last_name"]} - {type_of_event} - {event_to_be_created["brand"]} {event_to_be_created["model"]}'
-
-        # Validate if event that we want to create already exists
-        if event_to_be_created_summary in existing_events_list_summaries:
-            print(f"Event {event_to_be_created_summary} already exits!")
-            return False
-        else:
-            print(f"""This event does not exists. Creating event for {event_to_be_created["first_name"]} {event_to_be_created["last_name"]}""")
-            return True
-
-
-    def remove_events_from_calendar(self, query = None, start_date = None, end_date = None):
-        # Getting current datetime, but in UTC in isoformat:
-        # formatting and cutting off last 3 digits to get rid of microseconds) and append 'Z'
-        start_date_formatted = start_date.strftime('%Y-%m-%dT%H:%M:%S.%f')[:-3] + 'Z'
-        end_date_formatted = end_date.strftime('%Y-%m-%dT%H:%M:%S.%f')[:-3] + 'Z'
-        # Get list of all follow up events from calendar (uncomment timeMax to remove events from specific period)
-        events_result = (
-            self.google_calendar_service.events().list(
+            new_calendar_event = self.google_calendar_service.events().insert(
                 calendarId=self.target_calendar_id,
-                q=query,
-                timeMin=start_date_formatted,
-                # timeMax=end_date_formatted,
-                singleEvents=True,
-                orderBy="startTime",
-            ).execute()
-        )
-        events = events_result.get("items", [])
-
-        for event in events:
-            self.google_calendar_service.events().delete(calendarId=self.target_calendar_id, eventId=event['id']).execute()
+                body=event_dict).execute()
+            
+            print(f'Event created: {new_calendar_event.get("summary")}')
+            return new_calendar_event
+        except GoogleAPIError as e:
+            raise GoogleAPIError(f"Google Calendar API error during event creation: {str(e)}")
+        except Exception as e:
+            raise Exception(f'Failed to create event: {str(e)}')
         
-        print("Events removed from calendar")
+    def _format_date_for_api(self, date: datetime) -> str:
+        """
+        Formats datetime object for Google Calendar API.
+        
+        Args:
+            date (datetime): Date to format
+            
+        Returns:
+            str: Formatted date string
+        """
+        return date.strftime('%Y-%m-%dT%H:%M:%S.%f')[:-3] + 'Z'
 
     def update_xlsx_cell(self, file_url: str, column_name: str, row_index: int, new_value: str):
         """Aktualizuje komórkę w pliku XLSX"""
@@ -292,3 +509,27 @@ class GoogleServiceIntegrator:
         except Exception as e:
             print(f"Error updating Excel file: {str(e)}")
             return False
+
+    def remove_events_from_calendar(self, query = None, start_date = None, end_date = None):
+        # Getting current datetime, but in UTC in isoformat:
+        # formatting and cutting off last 3 digits to get rid of microseconds) and append 'Z'
+        start_date_formatted = start_date.strftime('%Y-%m-%dT%H:%M:%S.%f')[:-3] + 'Z'
+        end_date_formatted = end_date.strftime('%Y-%m-%dT%H:%M:%S.%f')[:-3] + 'Z'
+        # Get list of all follow up events from calendar (uncomment timeMax to remove events from specific period)
+        events_result = (
+            self.google_calendar_service.events().list(
+                calendarId=self.target_calendar_id,
+                q=query,
+                timeMin=start_date_formatted,
+                # timeMax=end_date_formatted,
+                singleEvents=True,
+                orderBy="startTime",
+            ).execute()
+        )
+        events = events_result.get("items", [])
+
+        for event in events:
+            self.google_calendar_service.events().delete(calendarId=self.target_calendar_id, eventId=event['id']).execute()
+        
+        print("Events removed from calendar")
+

@@ -6,7 +6,6 @@ import functions_framework
 import os
 
 
-
 @functions_framework.http
 def create_new_events(request, context=None):
     print("Starting main execution.") 
@@ -20,7 +19,7 @@ def create_new_events(request, context=None):
 
     # Create utilities object
     DataConfiguratorObject = UtilsConfigurator()
-    START, END = DataConfiguratorObject.timeframe_window()
+    START, END = DataConfiguratorObject.timeframe_window() # By default next 30 days, today included
 
     # Create email service object
     EmailServiceObject = EmailService()
@@ -32,7 +31,7 @@ def create_new_events(request, context=None):
     source_file = DataTransformerObject.load_source_file_from_gdrive(SOURCE_FILE_URL)
     source_file_transformed = DataTransformerObject.transform_file(source_file)
 
-    # Get all events
+    # Get all next month events from source
     follow_up_1_events_to_be_created = DataTransformerObject.get_dict_of_events_from_timeframe(source_file_transformed, START, END, "follow_up_1")
     follow_up_2_events_to_be_created = DataTransformerObject.get_dict_of_events_from_timeframe(source_file_transformed, START, END, "follow_up_2")
     follow_up_3_events_to_be_created = DataTransformerObject.get_dict_of_events_from_timeframe(source_file_transformed, START, END, "follow_up_3")
@@ -40,19 +39,25 @@ def create_new_events(request, context=None):
     car_inspection_events_to_be_created = DataTransformerObject.get_dict_of_events_from_timeframe(source_file_transformed, START, END, "car_inspection")
     car_registration_events_to_be_created = DataTransformerObject.get_dict_of_events_from_timeframe(source_file_transformed, START, END, "car_registration")
 
-    # Create all events in kontakt@mieszkomotors.com Google Calendar
-    GoogleServiceIntegratorObject.create_events_for_next_month(START, END, follow_up_1_events_to_be_created, "follow_up_1")
-    GoogleServiceIntegratorObject.create_events_for_next_month(START, END, follow_up_2_events_to_be_created, "follow_up_2")
-    GoogleServiceIntegratorObject.create_events_for_next_month(START, END, follow_up_3_events_to_be_created, "follow_up_3")
-    GoogleServiceIntegratorObject.create_events_for_next_month(START, END, insurance_events_to_be_created, "car_insurance")
-    GoogleServiceIntegratorObject.create_events_for_next_month(START, END, car_inspection_events_to_be_created, "car_inspection")
-    GoogleServiceIntegratorObject.create_events_for_next_month(START, END, car_registration_events_to_be_created, "car_registration")
+    # # Create all calendar reminders in kontakt@mieszkomotors.com Google Calendar
+    # GoogleServiceIntegratorObject.create_events_for_next_month(START, END, follow_up_1_events_to_be_created, "follow_up_1")
+    # GoogleServiceIntegratorObject.create_events_for_next_month(START, END, follow_up_2_events_to_be_created, "follow_up_2")
+    # GoogleServiceIntegratorObject.create_events_for_next_month(START, END, follow_up_3_events_to_be_created, "follow_up_3")
+    # GoogleServiceIntegratorObject.create_events_for_next_month(START, END, insurance_events_to_be_created, "car_insurance")
+    # GoogleServiceIntegratorObject.create_events_for_next_month(START, END, car_inspection_events_to_be_created, "car_inspection")
+    # GoogleServiceIntegratorObject.create_events_for_next_month(START, END, car_registration_events_to_be_created, "car_registration")
 
-    # # Send emails to clients
-    # EmailServiceObject.send_email("car_inspection", car_inspection_events_to_be_created, SOURCE_FILE_URL, GoogleServiceIntegratorObject)
-    # EmailServiceObject.send_email("car_insurance", insurance_events_to_be_created, SOURCE_FILE_URL, GoogleServiceIntegratorObject)
+    # Send reminder emails to clients
+    EmailServiceObject.send_email("car_inspection", car_inspection_events_to_be_created, SOURCE_FILE_URL, GoogleServiceIntegratorObject)
+    EmailServiceObject.send_email("car_insurance", insurance_events_to_be_created, SOURCE_FILE_URL, GoogleServiceIntegratorObject)
 
     return "Events creation function finished"
+
+
+
+
+
+
 
 
 
