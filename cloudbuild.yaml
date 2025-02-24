@@ -6,14 +6,14 @@ steps:
       - gcloud
       - functions
       - deploy
-      - function-google-calendar-event-creation
+      - function-check-new-events-make-reminders
       - --entry-point=create_new_events
       - --region=europe-west1	
       - --source=./gcloud/gcloud_functions
       - --trigger-http
       - --runtime=python312
       - --memory=1GB
-      - --set-env-vars=PROJECT_ID=481715545022,SECRET_ID=google-calendar-key,TARGET_CALENDAR_ID=kontakt@mieszkomotors.com,SOURCE_FILE_URL=https://docs.google.com/spreadsheets/d/1GvAwkCIMPoSAxbfsCbLblEVp0E5CeFw6/export?format=xlsx
+      - --set-env-vars=PROJECT_ID=481715545022,SECRET_ID=google-calendar-key,SMTP_CONFIG_SECRET=smtp_config,TARGET_CALENDAR_ID=kontakt@mieszkomotors.com,SOURCE_FILE_URL=https://docs.google.com/spreadsheets/d/1GvAwkCIMPoSAxbfsCbLblEVp0E5CeFw6/export?format=xlsx
   # - name: "gcr.io/google.com/cloudsdktool/cloud-sdk"
   #   args:
   #     - gcloud
