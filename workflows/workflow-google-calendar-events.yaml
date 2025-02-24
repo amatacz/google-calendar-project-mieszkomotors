@@ -4,7 +4,7 @@ main:
     - checkForNewEvents:
         call: http.get
         args:
-            url: 'https://europe-west1-sinuous-tuner-428711-f2.cloudfunctions.net/function-google-calendar-event-creation'
+            url: 'https://europe-west1-sinuous-tuner-428711-f2.cloudfunctions.net/function-check-new-events-make-reminders'
             auth:
               type: OIDC
         result: function_response
