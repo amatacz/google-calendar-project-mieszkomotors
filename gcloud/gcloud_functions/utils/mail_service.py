@@ -6,8 +6,8 @@ import os
 
 class EmailService():
     def __init__(self):
-         self.smtp_config = os.getenv("SMTP_CONFIG")
-         self.EVENT_TYPES = {
+        self.smtp_config = os.getenv("SMTP_CONFIG")
+        self.EVENT_TYPES = {
             "car_registration": "rejestracja auta",
             "car_inspection": "przegląd techniczny",
             "car_insurance": "ubezpieczenie samochodu",
@@ -15,6 +15,7 @@ class EmailService():
             "follow_up_2": "drugi follow up",
             "follow_up_3": "trzeci follow up"
         }  
+        self.raw_template = None
 
     def load_template(self, template_path):
         """
@@ -43,10 +44,10 @@ class EmailService():
         """
         try:
             # Read HTML template
-            raw_remplate = self.load_template(f".\\utils\\reminders_templates\\{type_of_event}.html")
+            self.raw_template = self.load_template(os.path.join("utils", "reminders_templates", f"{type_of_event}.html"))
 
             # Initialize processed_template var
-            processed_template = raw_remplate
+            processed_template = self.raw_template
             
             # Insert details from event_details to placeholder in template
             for key, value in event_details.items():
@@ -61,7 +62,7 @@ class EmailService():
             return processed_template
             
         except FileNotFoundError:
-            raise FileNotFoundError(f"Unable to find template: {raw_remplate}")
+            raise FileNotFoundError(f"Unable to find template: {self.raw_template}")
         except KeyError:
             raise KeyError(f"Key is not present in event_details: {str(e)}")
         except Exception as e:
