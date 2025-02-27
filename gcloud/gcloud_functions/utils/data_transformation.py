@@ -107,8 +107,8 @@ class DataTransformer:
         """
         pd.options.mode.chained_assignment = None
 
-        required_columns = ["No.", "collaboration_start_date",  "collaboration_end_date",  "first_name",
-        "last_name",  "city",  "phone_number",  "e-mail",  "brand",  "model", "follow_up_1",  "follow_up_2",
+        required_columns = ["No", "collaboration_start_date",  "collaboration_end_date",  "first_name",
+        "last_name",  "city",  "phone_number",  "email",  "brand",  "model", "follow_up_1",  "follow_up_2",
         "follow_up_3", "car_inspection", "car_insurance", "car_registration", "car_inspection_reminder",
         "car_insurance_reminder", "car_registration_reminder"]
         reminder_columns = ["car_inspection_reminder", "car_insurance_reminder", "car_registration_reminder"]

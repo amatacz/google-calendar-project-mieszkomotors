@@ -1,10 +1,11 @@
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
-from google.api_core.exceptions import GoogleAPIError
+from google.api_core.exceptions import GoogleAPIError, Conflict
 from googleapiclient.http import MediaIoBaseUpload
 from google.auth.transport import requests
 from google.cloud.secretmanager import SecretManagerServiceClient 
+from google.cloud import bigquery, storage
 from datetime import timedelta, datetime
 from io import BytesIO
 import os
@@ -19,7 +20,14 @@ class GoogleServiceIntegrator:
         self.google_drive_service = None
         self.google_calendar_service = None
         self.gmail_service = None
+        self.bigquery_client = None
+        self.storage_client = None
+
         self.target_calendar_id = os.getenv("TARGET_CALENDAR_ID")
+        self.PROJECT_ID = os.getenv("PROJECT_ID")
+        self.SECRET_ID = os.getenv("SECRET_ID")
+        self.SOURCE_FILE_URL = os.getenv("SOURCE_FILE_URL")
+
         self.EVENT_TYPES = {
             "car_registration": "rejestracja auta",
             "car_inspection": "przegląd techniczny",
@@ -40,7 +48,7 @@ class GoogleServiceIntegrator:
         Returns:
             str: decoded secret value
         Raises:
-            ValueError: When the required dataframe is missing
+            ValueError: When the required parameters are missing
             Exception: For other errors during file reading or processing
         """
         if not project_id or not secret_id:
@@ -108,7 +116,9 @@ class GoogleServiceIntegrator:
             'https://www.googleapis.com/auth/drive.metadata.readonly',
             'https://www.googleapis.com/auth/drive.file',
             'https://www.googleapis.com/auth/drive',
-            'https://www.googleapis.com/auth/spreadsheets'
+            'https://www.googleapis.com/auth/spreadsheets',
+            'https://www.googleapis.com/auth/bigquery'
+
         ]
 
         creds_json = self.get_secret(project_id, secret_id)
@@ -129,12 +139,10 @@ class GoogleServiceIntegrator:
         Returns: Google services
         """
         
-        PROJECT_ID = os.getenv("PROJECT_ID")
-        SECRET_ID = os.getenv("SECRET_ID")
         
         try:
             # Access the secret from Secret Manager
-            credentials = self.get_service_account_credentials(PROJECT_ID, SECRET_ID)
+            credentials = self.get_service_account_credentials(self.PROJECT_ID, self.SECRET_ID)
         except Exception as e:
             raise Exception(f"Issue with getting service account credentials {e}")
         
@@ -150,10 +158,19 @@ class GoogleServiceIntegrator:
             # Build the Gmail service
             self.gmail_service = build("gmail", "v1", credentials=credentials)
             print("Gmail Service created.")
+
+            # Build the BigQuery Client
+            self.bigquery_client = bigquery.Client(credentials=credentials, project=self.PROJECT_ID)
+            print("BigQuery Client created.")
+
+            # Build the Storage Client
+            self.storage_client = storage.Client(credentials=credentials)
+            print("Storage Client created.")
+
         except Exception as e:
             raise Exception(f"Error occurred while creating Google services: {e}")
         
-        return self.google_drive_service, self.google_calendar_service, self.gmail_service
+        return self.google_drive_service, self.google_calendar_service, self.gmail_service, self.bigquery_client, self.storage_client
     
 
     def get_source_file_url(self,
@@ -533,3 +550,59 @@ class GoogleServiceIntegrator:
         
         print("Events removed from calendar")
 
+    # def _create_bigquery_dataset(self, dataset_name):
+    #     ''' Creates new dataset in BigQuery project.'''
+    #     client = self.bigquery_client()  # connect to BigQuery
+    #     dataset = bigquery.Dataset(f"{self.PROJECT_ID}.{dataset_name}")  # create dataset
+    #     try:
+    #         dataset = client.create_dataset(dataset, timeout=30)  # make API call
+    #     except Conflict:
+    #         print(f"Dataset {dataset_name} already exists.")
+    #         pass
+    #     except Exception as e:
+    #         print(f"Error occured: {e}")
+    #         pass
+
+    # def _create_bigquery_table(self, dataset_name, table_name, schema):
+
+    #     """
+    #     Create new table in BigQuery project and dataset
+    #     """
+    #     table_id = f"{self.project_id}.{dataset_name}.{table_name}"  # create table_id
+
+    #     schema = [
+    #         bigquery.SchemaField("No", "NUMERIC",),
+    #         bigquery.SchemaField("collaboration_start_date", "DATE"),
+    #         bigquery.SchemaField("collaboration_end_date", "DATE"),
+    #         bigquery.SchemaField("first_name", "STRING"),
+    #         bigquery.SchemaField("last_name", "STRING"),
+    #         bigquery.SchemaField("city", "STRING"),
+    #         bigquery.SchemaField("phone_number", "STRING"),
+    #         bigquery.SchemaField("email", "STRING"),
+    #         bigquery.SchemaField("brand", "STRING"),
+    #         bigquery.SchemaField("model", "STRING"),
+    #         bigquery.SchemaField("financing", "STRING"),
+    #         bigquery.SchemaField("seller", "STRING"),
+    #         bigquery.SchemaField("brutto_commission", "NUMERIC"),
+    #         bigquery.SchemaField("insurance", "STRING"),
+    #         bigquery.SchemaField("contact_source", "STRING"),
+    #         bigquery.SchemaField("seller_representative", "STRING"),
+    #         bigquery.SchemaField("insurance_agent", "STRING"),
+    #         bigquery.SchemaField("financing_agent", "STRING"),
+    #         bigquery.SchemaField("follow_up_1", "DATE"),
+    #         bigquery.SchemaField("follow_up_2", "DATE"),
+    #         bigquery.SchemaField("follow_up_3", "DATE"),
+    #         bigquery.SchemaField("car_inspection", "DATE"),
+    #         bigquery.SchemaField("car_insurance", "DATE"),
+    #         bigquery.SchemaField("car_registration", "DATE"),
+    #         bigquery.SchemaField("car_inspection_reminder", "STRING"),
+    #         bigquery.SchemaField("car_insurance_reminder", "STRING"),
+    #         bigquery.SchemaField("car_registration_reminder", "STRING")
+    #     ]
+    #     try:
+    #         table = bigquery.Table(table(table_id), schema=schema)
+    #         table = self.bigquery_client.create_table(table)
+    #     except Conflict:
+    #         raise Conflict(f"Table {table_id} already exists.")
+        
+        
