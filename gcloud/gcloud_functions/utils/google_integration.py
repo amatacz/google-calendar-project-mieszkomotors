@@ -5,13 +5,17 @@ from google.api_core.exceptions import GoogleAPIError, Conflict
 from googleapiclient.http import MediaIoBaseUpload
 from google.auth.transport import requests
 from google.cloud.secretmanager import SecretManagerServiceClient 
-from google.cloud import bigquery, storage
+from google.cloud import bigquery
+from google.cloud.bigquery import WriteDisposition
+from google.cloud import storage
 from datetime import timedelta, datetime
-from io import BytesIO
+from io import BytesIO, StringIO
 import os
 import json
 import requests
 import openpyxl
+import urllib3
+
 
 
 class GoogleServiceIntegrator:
@@ -35,8 +39,7 @@ class GoogleServiceIntegrator:
             "follow_up_1": "pierwszy follow up",
             "follow_up_2": "drugi follow up",
             "follow_up_3": "trzeci follow up"
-        }        
-
+        }
 
     def get_secret(self, project_id, secret_id, version_id="latest"):
         """
@@ -62,7 +65,6 @@ class GoogleServiceIntegrator:
             raise Exception(f"Error during getting secret from Secret Manager Client: {e}")
         return response.payload.data.decode('UTF-8')
     
-    
     def get_smtp_config(self, project_id=None, secret_id=None):
         """
         Extracts smtp_config from SecretManager by invoking get_secret function.
@@ -84,7 +86,6 @@ class GoogleServiceIntegrator:
         smtp_config = json.loads(secret_data)
         return smtp_config
 
-    
     def update_secret(self, project_id, secret_id, secret_value):
         """
         Update secret with new secret if expired and save it to secrets manager obj
@@ -117,8 +118,8 @@ class GoogleServiceIntegrator:
             'https://www.googleapis.com/auth/drive.file',
             'https://www.googleapis.com/auth/drive',
             'https://www.googleapis.com/auth/spreadsheets',
-            'https://www.googleapis.com/auth/bigquery'
-
+            'https://www.googleapis.com/auth/bigquery',
+            'https://www.googleapis.com/auth/devstorage.full_control'
         ]
 
         creds_json = self.get_secret(project_id, secret_id)
@@ -172,7 +173,6 @@ class GoogleServiceIntegrator:
         
         return self.google_drive_service, self.google_calendar_service, self.gmail_service, self.bigquery_client, self.storage_client
     
-
     def get_source_file_url(self,
                             file_name: str = "MieszkoMotors_praca.xlsx",
                             format: str = "xlsx"):
@@ -222,7 +222,6 @@ class GoogleServiceIntegrator:
             raise GoogleAPIError(f"GoogleAPIError - Failed to get file URL from Google Drive: {str(e)}.")
         except Exception as e:
             raise Exception(f"Failed to get file URL from Google Drive: {str(e)}")
-
 
     def get_events_list(
         self, 
@@ -417,7 +416,7 @@ class GoogleServiceIntegrator:
                 f'W związku z {self.EVENT_TYPES[type_of_event]} dnia {event[type_of_event]}<hr>'
                 f'Dane kontaktowe:<ul>'
                 f'<li>Nr telefonu: <a href="tel:{event["phone_number"]}">{event["phone_number"]}</a></li>'
-                f'<li>E-mail: {event["e-mail"]}</li>'
+                f'<li>E-mail: {event["email"]}</li>'
                 f'</ul><hr>'
             )
             
@@ -550,59 +549,104 @@ class GoogleServiceIntegrator:
         
         print("Events removed from calendar")
 
-    # def _create_bigquery_dataset(self, dataset_name):
-    #     ''' Creates new dataset in BigQuery project.'''
-    #     client = self.bigquery_client()  # connect to BigQuery
-    #     dataset = bigquery.Dataset(f"{self.PROJECT_ID}.{dataset_name}")  # create dataset
-    #     try:
-    #         dataset = client.create_dataset(dataset, timeout=30)  # make API call
-    #     except Conflict:
-    #         print(f"Dataset {dataset_name} already exists.")
-    #         pass
-    #     except Exception as e:
-    #         print(f"Error occured: {e}")
-    #         pass
+    def _create_bigquery_dataset(self, dataset_name):
+        ''' Creates new dataset in BigQuery project.'''
+        dataset = bigquery.Dataset(f"{self.PROJECT_ID}.{dataset_name}")  # create dataset
+        try:
+            dataset = self.bigquery_client.create_dataset(dataset, timeout=30)  # make API call
+        except Conflict:
+            print(f"Dataset {dataset_name} already exists.")
+            pass
+        except Exception as e:
+            print(f"Error occured: {e}")
+            pass
 
-    # def _create_bigquery_table(self, dataset_name, table_name, schema):
+    def _create_bigquery_table(self, dataset_name, table_name, schema):
 
-    #     """
-    #     Create new table in BigQuery project and dataset
-    #     """
-    #     table_id = f"{self.project_id}.{dataset_name}.{table_name}"  # create table_id
+        """
+        Create new table in BigQuery project and dataset
+        """
+        table_id = f"{self.PROJECT_ID}.{dataset_name}.{table_name}"  # create table_id
 
-    #     schema = [
-    #         bigquery.SchemaField("No", "NUMERIC",),
-    #         bigquery.SchemaField("collaboration_start_date", "DATE"),
-    #         bigquery.SchemaField("collaboration_end_date", "DATE"),
-    #         bigquery.SchemaField("first_name", "STRING"),
-    #         bigquery.SchemaField("last_name", "STRING"),
-    #         bigquery.SchemaField("city", "STRING"),
-    #         bigquery.SchemaField("phone_number", "STRING"),
-    #         bigquery.SchemaField("email", "STRING"),
-    #         bigquery.SchemaField("brand", "STRING"),
-    #         bigquery.SchemaField("model", "STRING"),
-    #         bigquery.SchemaField("financing", "STRING"),
-    #         bigquery.SchemaField("seller", "STRING"),
-    #         bigquery.SchemaField("brutto_commission", "NUMERIC"),
-    #         bigquery.SchemaField("insurance", "STRING"),
-    #         bigquery.SchemaField("contact_source", "STRING"),
-    #         bigquery.SchemaField("seller_representative", "STRING"),
-    #         bigquery.SchemaField("insurance_agent", "STRING"),
-    #         bigquery.SchemaField("financing_agent", "STRING"),
-    #         bigquery.SchemaField("follow_up_1", "DATE"),
-    #         bigquery.SchemaField("follow_up_2", "DATE"),
-    #         bigquery.SchemaField("follow_up_3", "DATE"),
-    #         bigquery.SchemaField("car_inspection", "DATE"),
-    #         bigquery.SchemaField("car_insurance", "DATE"),
-    #         bigquery.SchemaField("car_registration", "DATE"),
-    #         bigquery.SchemaField("car_inspection_reminder", "STRING"),
-    #         bigquery.SchemaField("car_insurance_reminder", "STRING"),
-    #         bigquery.SchemaField("car_registration_reminder", "STRING")
-    #     ]
-    #     try:
-    #         table = bigquery.Table(table(table_id), schema=schema)
-    #         table = self.bigquery_client.create_table(table)
-    #     except Conflict:
-    #         raise Conflict(f"Table {table_id} already exists.")
+        try:
+            table = bigquery.Table(table_id, schema=schema)
+            table = self.bigquery_client.create_table(table)
+        except Conflict:
+             print(f"Table {table_id} already exists.")
+
+    def insert_data_from_df_to_bigquery_table(self, data, dataset_name, table_name, schema=None):
+        ''' Inserts data from DataFrame to BigQuery table '''
+
+        if not schema:
+                schema = [                
+            bigquery.SchemaField("No", "STRING"),
+            bigquery.SchemaField("collaboration_start_date", "DATE"),
+            bigquery.SchemaField("collaboration_end_date", "DATE"),
+            bigquery.SchemaField("first_name", "STRING"),
+            bigquery.SchemaField("last_name", "STRING"),
+            bigquery.SchemaField("city", "STRING"),
+            bigquery.SchemaField("phone_number", "STRING"),
+            bigquery.SchemaField("email", "STRING"),
+            bigquery.SchemaField("brand", "STRING"),
+            bigquery.SchemaField("model", "STRING"),
+            # bigquery.SchemaField("financing", "STRING"),
+            # bigquery.SchemaField("seller", "STRING"),
+            # bigquery.SchemaField("brutto_commission", "NUMERIC"),
+            # bigquery.SchemaField("insurance", "STRING"),
+            # bigquery.SchemaField("contact_source", "STRING"),
+            # bigquery.SchemaField("seller_representative", "STRING"),
+            # bigquery.SchemaField("insurance_agent", "STRING"),
+            # bigquery.SchemaField("financing_agent", "STRING"),
+            bigquery.SchemaField("follow_up_1", "DATE"),
+            bigquery.SchemaField("follow_up_2", "DATE"),
+            bigquery.SchemaField("follow_up_3", "DATE"),
+            bigquery.SchemaField("car_inspection", "DATE"),
+            bigquery.SchemaField("car_insurance", "DATE"),
+            bigquery.SchemaField("car_registration", "DATE"),
+            bigquery.SchemaField("car_inspection_reminder", "STRING"),
+            bigquery.SchemaField("car_insurance_reminder", "STRING"),
+            bigquery.SchemaField("car_registration_reminder", "STRING")
+        ]
+
+        table_id = f"{self.PROJECT_ID}.{dataset_name}.{table_name}"  # choose the destination table
+        job_config = bigquery.LoadJobConfig(schema=schema)  # choose table schema
+        try:
+            job = self.bigquery_client.load_table_from_dataframe(
+                data, table_id, job_config=job_config)  # Upload the contents of a table from a DataFrame
+            job.result()  # Start the job and wait for it to complete and get the result
+            print("DATA UPLOADED")
+        except Exception as e:
+            print("Error occured: ", e)        
         
-        
+    def create_dataset_table_and_insert_data(self, dataset_name, table_name, schema, data):
+        # create BigQuery dataset
+        self._create_bigquery_dataset(dataset_name)
+        # create BigQueryTable
+        self._create_bigquery_table(dataset_name, table_name, schema=schema)
+        # populate table with data
+        self._insert_data_from_df_to_bigquery_table(data, dataset_name, table_name, schema=None)
+
+    # def upload_data_to_cloud_from_file(self, bucket_name, data_to_upload, blob_name):
+    #     ''' Uploads files with api data to GCP buckets. '''
+    #     bucket = self.storage_client.bucket(bucket_name) # connect to bucket
+    #     blob = bucket.blob(blob_name)  # create a blob
+    #     with open(data_to_upload, "rb") as file:
+    #         blob.upload_from_file(file)  # upload data to blob
+
+    def upload_data_to_cloud_from_url(self, bucket_name, data_to_upload, blob_name):
+        ''' Uploads files with api data to GCP buckets. '''
+
+        # csv_content = StringIO()
+        # data_to_upload.to_csv(csv_content, index=False, sep=',')
+        # csv_content.seek(0)
+
+
+        bucket = self.storage_client.bucket(bucket_name) # connect to bucket
+        blob = bucket.blob(blob_name)  # create a blob
+        # Ustawienie typu zawartości
+        blob.content_type = 'text/csv'
+
+        blob.upload_from_file(data_to_upload, content_type='text/csv')
+
+        # Zwracamy URI pliku, który można użyć w BigQuery
+        gcs_uri = f"gs://{bucket_name}/{blob_name}"

@@ -109,7 +109,7 @@ class EmailService():
                     # Configure email message headers
                     msg = MIMEMultipart()
                     msg['From'] = smtp_config['user']
-                    msg['To'] = email_data["e-mail"]
+                    msg['To'] = email_data["email"]
                     msg['BCC'] = smtp_config["user"]
                     msg['Subject'] = f'[WAŻNE] {self.EVENT_TYPES[type_of_event]} wymaga odnowienia - {email_data["brand"]} {email_data["model"]} - MieszkoMotors'
 
@@ -133,11 +133,11 @@ class EmailService():
                     )
                     
                     if update_success:
-                        print(f"Successfully updated status for {email_data['e-mail']} in Google Drive")
+                        print(f"Successfully updated status for {email_data['email']} in Google Drive")
                     else:
-                        print(f"Failed to update status for {email_data['e-mail']} in Google Drive")
+                        print(f"Failed to update status for {email_data['email']} in Google Drive")
                 except Exception as e:
-                    print(f"Error processing email for {email_data['e-mail']}: {str(e)}")
+                    print(f"Error processing email for {email_data['email']}: {str(e)}")
             else:
                 print(f"All {type_of_event} reminders sent already!")
  
