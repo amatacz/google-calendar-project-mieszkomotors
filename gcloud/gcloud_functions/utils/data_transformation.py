@@ -127,6 +127,8 @@ class DataTransformer:
             df_transformed = df.sort_values("follow_up_1")
             df_transformed = df_transformed[required_columns]
 
+            df_transformed["No"] = df["No"].astype("str")
+
             # Format phone number to be clickable on mobile calendar
             df_transformed["phone_number"] = df_transformed["phone_number"].astype("str").apply(lambda x: x.replace(" ", ""))
 
