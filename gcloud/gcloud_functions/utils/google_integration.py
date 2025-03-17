@@ -7,7 +7,6 @@ from google.auth.transport import requests
 from google.cloud.secretmanager import SecretManagerServiceClient 
 from google.cloud import bigquery
 from google.cloud.bigquery import WriteDisposition
-from google.cloud import storage
 from datetime import timedelta, datetime
 from io import BytesIO, StringIO
 import os
@@ -25,7 +24,6 @@ class GoogleServiceIntegrator:
         self.google_calendar_service = None
         self.gmail_service = None
         self.bigquery_client = None
-        self.storage_client = None
 
         self.target_calendar_id = os.getenv("TARGET_CALENDAR_ID")
         self.PROJECT_ID = os.getenv("PROJECT_ID")
@@ -164,14 +162,11 @@ class GoogleServiceIntegrator:
             self.bigquery_client = bigquery.Client(credentials=credentials, project=self.PROJECT_ID)
             print("BigQuery Client created.")
 
-            # Build the Storage Client
-            self.storage_client = storage.Client(credentials=credentials)
-            print("Storage Client created.")
 
         except Exception as e:
             raise Exception(f"Error occurred while creating Google services: {e}")
         
-        return self.google_drive_service, self.google_calendar_service, self.gmail_service, self.bigquery_client, self.storage_client
+        return self.google_drive_service, self.google_calendar_service, self.gmail_service, self.bigquery_client
     
     def get_source_file_url(self,
                             file_name: str = "MieszkoMotors_praca.xlsx",
