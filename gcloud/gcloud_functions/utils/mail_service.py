@@ -128,7 +128,7 @@ class EmailService():
                     update_success = google_service_integrator.update_xlsx_cell(
                         file_url=source_file_url,
                         column_name=reminder_column,
-                        row_index=email_data['No.'],
+                        row_index=email_data['No'],
                         new_value='Sent'
                     )
                     
