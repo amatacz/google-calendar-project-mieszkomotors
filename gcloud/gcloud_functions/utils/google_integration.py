@@ -493,7 +493,7 @@ class GoogleServiceIntegrator:
                 raise ValueError(f"Column {column_name} not found in file")
 
             # Aktualizuj konkretną komórkę
-            ws.cell(row=row_index+1, column=column_index, value=new_value)
+            ws.cell(row=int(row_index)+1, column=column_index, value=new_value)
 
             # Zapisz do bufora
             output = BytesIO()

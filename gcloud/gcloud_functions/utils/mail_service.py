@@ -131,7 +131,7 @@ class EmailService():
                         row_index=email_data['No'],
                         new_value='Sent'
                     )
-                    
+                   
                     if update_success:
                         print(f"Successfully updated status for {email_data['email']} in Google Drive")
                     else:
@@ -141,10 +141,3 @@ class EmailService():
             else:
                 print(f"All {type_of_event} reminders sent already!")
  
-        
-
-
-            
-
-            
-    
