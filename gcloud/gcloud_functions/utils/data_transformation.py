@@ -9,18 +9,18 @@ class DataTransformer:
 
     def read_source_file_from_path(self, path=None):
         """
-        Read source excel file from given path
+        Read source google sheets file from given path
         Args:
-            path (str): path fo excel source file
+            path (str): path to google sheets source file
         Returns:
             df: data frame
         Raises:
-            FileNotFoundError: When the Excel file is not found
+            FileNotFoundError: When the Google Sheets file is not found
             ValueError: When the required sheet or columns are missing
             Exception: For other errors during file reading or processing
         """
         try:
-            file_path = path if path else "./MieszkoMotors_praca.xlsx"
+            file_path = path if path else "./MieszkoMotors_praca"
             sheet_name = "Wykaz_realizacji"
 
             # Check if file exists
